@@ -21,6 +21,11 @@ https://management.core.windows.net/
 
 @string(activity('Filter_To_Find_Busy_Writers').output.FilteredItemsCount)
 
+@greater(int(variables('activeRuns')), 0)
+
+
+
+
 # Databricks Notebook: Common_Write_to_DB_Notebook
 # This notebook handles safe, sequential writing of alerts to the database.
 # It receives a DataFrame (alerts) as a JSON string and other metadata from ADF.
