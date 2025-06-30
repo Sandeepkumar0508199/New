@@ -15,6 +15,7 @@
 
 https://management.core.windows.net/
 
+@activity('Ask_ADF_Who_Is_Writing').output.value
 
 
 # Databricks Notebook: Common_Write_to_DB_Notebook
