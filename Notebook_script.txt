@@ -17,6 +17,7 @@ https://management.core.windows.net/
 
 @activity('Ask_ADF_Who_Is_Writing').output.value
 
+@or(equals(item().status, 'InProgress'), equals(item().status, 'Queued'))
 
 # Databricks Notebook: Common_Write_to_DB_Notebook
 # This notebook handles safe, sequential writing of alerts to the database.
