@@ -1,3 +1,7 @@
+@concat('https://management.azure.com/subscriptions/', pipeline().parameters.SubscriptionId, '/resourceGroups/', pipeline().parameters.ResourceGroupName, '/providers/Microsoft.DataFactory/factories/', pipeline().parameters.DataFactoryName, '/queryPipelineRuns?api-version=2018-06-01')
+
+
+
 # Databricks Notebook: Common_Write_to_DB_Notebook
 # This notebook handles safe, sequential writing of alerts to the database.
 # It receives a DataFrame (alerts) as a JSON string and other metadata from ADF.
