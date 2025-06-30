@@ -1,0 +1,213 @@
+# Databricks Notebook: Common_Write_to_DB_Notebook_FIXED (or Common_Write_to_DB_Notebook if you are editing the original)
+# This notebook handles safe, sequential writing of alerts to the database.
+# It receives a DataFrame (alerts) as a JSON string and other metadata from ADF.
+
+import pandas as pd
+from pyspark.sql.functions import col, lit, split, explode, regexp_replace
+from pyspark.sql.types import StructType, StructField, StringType
+import json
+
+# --- 1. Fetch Inputs from ADF ---
+input_dataframe_json_str = dbutils.widgets.get("input_dataframe_json")
+input_survid = dbutils.widgets.get("input_survid")
+input_ds_runid = dbutils.widgets.get("input_ds_runid")
+input_alert_type = dbutils.widgets.get("input_alert_type")
+
+# --- 2. Reconstruct DataFrame from JSON string ---
+try:
+    if not input_dataframe_json_str or input_dataframe_json_str.strip() == '[]':
+        alert_schema = StructType([
+            StructField("SMBCAIDPrefix", StringType(), True),
+            StructField("ProductSymbol", StringType(), True),
+            StructField("SMBCALertTime", StringType(), True),
+            StructField("SMBCLocalAlertTime", StringType(), True),
+            StructField("SMBCAlertType", StringType(), True),
+            StructField("IssuerName", StringType(), True),
+            StructField("ShortAlertDescription", StringType(), True),
+            StructField("TotalScore", StringType(), True),
+            StructField("BusinessUnit", StringType(), True),
+            StructField("SMBCAlertGenerationDate", StringType(), True),
+            StructField("ProductName", StringType(), True),
+            StructField("ProductID", StringType(), True),
+            StructField("AccountID", StringType(), True),
+            StructField("Exchange", StringType(), True),
+            StructField("AssetClass", StringType(), True),
+            StructField("LongDescription", StringType(), True),
+            StructField("AnalyticsValue1", StringType(), True),
+            StructField("AnalyticsValue2", StringType(), True),
+            StructField("AnalyticsValue3", StringType(), True),
+            StructField("AnalyticsValue4", StringType(), True),
+            StructField("AnalyticsValue5", StringType(), True),
+            StructField("AnalyticsValue6", StringType(), True),
+            StructField("AnalyticsValue7", StringType(), True),
+            StructField("AnalyticsValue8", StringType(), True),
+            StructField("AnalyticsValue9", StringType(), True),
+            StructField("AnalyticsValue10", StringType(), True),
+            StructField("AnalyticsValue11", StringType(), True),
+            StructField("AnalyticsValue12", StringType(), True),
+            StructField("AnalyticsValue13", StringType(), True),
+            StructField("AnalyticsValue14", StringType(), True),
+            StructField("AnalyticsValue15", StringType(), True),
+            StructField("AnalyticsValue16", StringType(), True),
+            StructField("AnalyticsValue17", StringType(), True),
+            StructField("AnalyticsValue18", StringType(), True),
+            StructField("AnalyticsValue19", StringType(), True),
+            StructField("AnalyticsValue20", StringType(), True),
+            StructField("ThresholdValue1", StringType(), True),
+            StructField("ThresholdValue2", StringType(), True),
+            StructField("ThresholdValue3", StringType(), True),
+            StructField("ThresholdValue4", StringType(), True),
+            StructField("ThresholdValue5", StringType(), True),
+            StructField("ThresholdValue6", StringType(), True),
+            StructField("ThresholdValue7", StringType(), True),
+            StructField("ThresholdValue8", StringType(), True),
+            StructField("ThresholdValue9", StringType(), True),
+            StructField("ThresholdValue10", StringType(), True),
+            StructField("ThresholdValue11", StringType(), True),
+            StructField("ThresholdValue12", StringType(), True),
+            StructField("ThresholdValue13", StringType(), True),
+            StructField("ThresholdValue14", StringType(), True),
+            StructField("ThresholdValue15", StringType(), True),
+            StructField("ThresholdValue16", StringType(), True),
+            StructField("ThresholdValue17", StringType(), True),
+            StructField("ThresholdValue18", StringType(), True),
+            StructField("ThresholdValue19", StringType(), True),
+            StructField("ThresholdValue20", StringType(), True),
+            StructField("ScoreComponent1", StringType(), True),
+            StructField("ScoreComponent2", StringType(), True),
+            StructField("ScoreComponent3", StringType(), True),
+            StructField("ScoreComponent4", StringType(), True),
+            StructField("ScoreComponent5", StringType(), True),
+            StructField("ScoreComponent6", StringType(), True),
+            StructField("ScoreComponent7", StringType(), True),
+            StructField("ScoreComponent8", StringType(), True),
+            StructField("ScoreComponent9", StringType(), True),
+            StructField("ScoreComponent10", StringType(), True),
+            StructField("ScoreComponent11", StringType(), True),
+            StructField("ScoreComponent12", StringType(), True),
+            StructField("ScoreComponent13", StringType(), True),
+            StructField("ScoreComponent14", StringType(), True),
+            StructField("ScoreComponent15", StringType(), True),
+            StructField("ScoreComponent16", StringType(), True),
+            StructField("ScoreComponent17", StringType(), True),
+            StructField("ScoreComponent18", StringType(), True),
+            StructField("ScoreComponent19", StringType(), True),
+            StructField("ScoreComponent20", StringType(), True),
+            StructField("AlertRelatedListOrderClordIds", StringType(), True),
+            StructField("AlertRelatedListExecutionClordIds", StringType(), True)
+        ])
+        alerts_df_spark = spark.createDataFrame([], schema=alert_schema)
+        print("Received empty DataFrame for writing. No alerts to process.")
+    else:
+        # --- THIS IS THE CORRECTED LINE! ---
+        alerts_df_spark = spark.read.json([input_dataframe_json_str]) # Changed from sc.parallelize
+        # --- END OF CORRECTED LINE ---
+        print(f"Received DataFrame with {alerts_df_spark.count()} rows for writing.")
+        alerts_df_spark.show(truncate=False)
+
+    for c in alerts_df_spark.columns:
+        alerts_df_spark = alerts_df_spark.withColumn(c, col(c).cast(StringType()))
+
+except Exception as e:
+    print(f"Error reconstructing DataFrame from JSON: {e}")
+    dbutils.notebook.exit(f"Failed to reconstruct DataFrame: {e}")
+
+if not alerts_df_spark.isEmpty():
+
+    sql_server_tdr = 'sql-tdr-qa-use2'
+    database_name_tdr = 'sqldb-tdr-qa-use2'
+    test_sp_name_tdr = dbutils.secrets.get("ccams-scope", "ccams-app-reg-id")
+    test_sp_pwd_tdr = dbutils.secrets.get("ccams-scope", "ccams-app-reg-sec")
+
+    sql_server_fqdn_tdr = f"jdbc:sqlserver://{sql_server_tdr}.database.windows.net:1433"
+    jdbc_parms_tdr = \
+    (
+    "encrypt=true;",
+    "trustServerCertificate=true;",
+    "hostNameInCertificate=*.database.windows.net;",
+    "loginTimeout=30;",
+    "driver=com.microsoft.sqlserver.jdbc.SQLServerDriver;",
+    "authentication=ActiveDirectoryServicePrincipal"
+    )
+    connection_string_tdr = f"jdbc:sqlserver://{sql_server_fqdn_tdr};database={database_name_tdr};user={test_sp_name_tdr};password={test_sp_pwd_tdr};{jdbc_parms_tdr}"
+
+    print("Inserting data into ccams.AlertDetail...")
+    try:
+        alerts_df_spark.write.format("jdbc").mode("append").option("url", connection_string_tdr).option("dbtable", "ccams.AlertDetail").save()
+        print("Successfully inserted into ccams.AlertDetail.")
+    except Exception as e:
+        print(f"Error inserting into AlertDetail: {e}")
+        dbutils.notebook.exit(f"Failed to write to AlertDetail: {e}")
+
+    print("Fetching MAX AlertID...")
+    try:
+        AlertID_df = (spark.read
+        .format("jdbc")
+        .option("url", connection_string_tdr)
+        .option("query", f"SELECT MAX(AlertID) as AlertID FROM ccams.AlertDetail WHERE SMBCAlertType = '{input_alert_type}'")
+        .load()
+        )
+        AlertID = AlertID_df.toPandas()['AlertID'].iloc[0]
+        print(f"Fetched AlertID: {AlertID}")
+    except Exception as e:
+        print(f"Error fetching AlertID: {e}")
+        dbutils.notebook.exit(f"Failed to fetch AlertID: {e}")
+
+    print("Preparing and inserting into ccams.AlertLink...")
+    try:
+        alertLink_data = {
+            'AlertID': [AlertID],
+            'SurveillanceRunId': [int(input_survid)],
+            'DataRecordID': [int(input_ds_runid)]
+        }
+        alertLink_df_spark = spark.createDataFrame(pd.DataFrame(alertLink_data))
+        alertLink_df_spark.write.format("jdbc").mode("append").option("url", connection_string_tdr).option("dbtable", "ccams.AlertLink").save()
+        print("Successfully inserted into ccams.AlertLink.")
+    except Exception as e:
+        print(f"Error inserting into AlertLink: {e}")
+        dbutils.notebook.exit(f"Failed to write to AlertLink: {e}")
+
+    print("Preparing and inserting into ccams.AlertTransactionLink...")
+    try:
+        if "AlertRelatedListExecutionClordIds" in alerts_df_spark.columns:
+            valid_alerts_df = alerts_df_spark.filter(
+                (col("AlertRelatedListExecutionClordIds").isNotNull()) &
+                (col("AlertRelatedListExecutionClordIds") != "")
+            )
+
+            if not valid_alerts_df.isEmpty():
+                exploded_df = valid_alerts_df.withColumn(
+                    "ClOrdIDs_Array",
+                    split(regexp_replace(col("AlertRelatedListExecutionClordIds"), "\\[|\\]", ""), ",")
+                )
+
+                alert_transaction_link_spark = exploded_df.select(
+                    lit(AlertID).alias("AlertID"),
+                    explode(col("ClOrdIDs_Array")).alias("ID")
+                ).withColumn("Type", lit("Execution"))
+
+                alert_transaction_link_spark = alert_transaction_link_spark.withColumn(
+                    "ID",
+                    regexp_replace(col("ID"), "\\s+", "")
+                )
+
+                alert_transaction_link_spark = alert_transaction_link_spark.filter(col("ID") != "")
+
+                if not alert_transaction_link_spark.isEmpty():
+                    alert_transaction_link_spark.write.format("jdbc").mode("append").option("url", connection_string_tdr).option("dbtable", "ccams.AlertTransactionLink").save()
+                    print("Successfully inserted into ccams.AlertTransactionLink.")
+                else:
+                    print("No valid AlertRelatedListExecutionClordIds to insert into AlertTransactionLink.")
+            else:
+                print("No alerts with AlertRelatedListExecutionClordIds found for AlertTransactionLink.")
+        else:
+            print("Column 'AlertRelatedListExecutionClordIds' not found in DataFrame. Skipping AlertTransactionLink.")
+    except Exception as e:
+        print(f"Error inserting into AlertTransactionLink: {e}")
+        dbutils.notebook.exit(f"Failed to write to AlertTransactionLink: {e}")
+
+else:
+    print("No data in DataFrame to write to database. Skipping all write operations.")
+
+print("Notebook execution finished: Data write process completed.")
+dbutils.notebook.exit("Success")
