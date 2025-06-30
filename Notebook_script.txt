@@ -13,6 +13,8 @@
   ]
 }
 
+https://management.core.windows.net/
+
 
 
 # Databricks Notebook: Common_Write_to_DB_Notebook
