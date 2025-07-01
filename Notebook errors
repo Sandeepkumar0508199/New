@@ -4,3 +4,13 @@ try:
 except json.JSONDecodeError:
     alerts_df_spark = spark.createDataFrame([], schema=alert_schema)
     print("Received invalid JSON for writing. No alerts to process.")
+
+
+
+else:
+        try:
+            json_data = json.loads(input_dataframe_json_str)
+            alerts_df_spark = spark.createDataFrame(json_data, schema=alert_schema)
+        except json.JSONDecodeError:
+            alerts_df_spark = spark.createDataFrame([], schema=alert_schema)
+            print("Received invalid JSON for writing. No alerts to process.")
