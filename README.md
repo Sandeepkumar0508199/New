@@ -8,3 +8,9 @@ Within the proxy pipeline, the Until activity is designed to process each patter
 I’ve already started building the structure: the proxy pipeline has been created, a test notebook is in place, and it's integrated with the necessary ADF objects. The next steps involve testing the connections and validating the logic with sample data.
 
 I’ll continue to keep you updated on the progress.
+try:
+    json_data = json.loads(input_dataframe_json_str)
+    alerts_df_spark = spark.createDataFrame(json_data, schema=alert_schema)
+except json.JSONDecodeError:
+    alerts_df_spark = spark.createDataFrame([], schema=alert_schema)
+    print("Received invalid JSON for writing. No alerts to process.")
