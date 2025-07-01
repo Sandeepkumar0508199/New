@@ -1,3 +1,10 @@
+# Add this at the very end of the 2B Cross Product Model notebook
+# This converts your final alerts Spark DataFrame (alertsDF_2) to a single JSON string for ADF.
+# alertsDF_2 is the name of your final Spark DataFrame in this notebook after processing.
+final_alerts_json_output = alertsDF_2.toPandas().to_json(orient='records')
+dbutils.notebook.exit(final_alerts_json_output) # Hand over notes (JSON) to ADF!
+
+
 @concat('https://management.azure.com/subscriptions/', pipeline().parameters.SubscriptionId, '/resourceGroups/', pipeline().parameters.ResourceGroupName, '/providers/Microsoft.DataFactory/factories/', pipeline().parameters.DataFactoryName, '/queryPipelineRuns?api-version=2018-06-01')
 
 
