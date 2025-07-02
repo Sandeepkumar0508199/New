@@ -1,43 +1,30 @@
-# Databricks Notebook: Common_DB_Write_Notebook
-
-# Get data tools.
 import pandas as pd
 import json
 import datetime as dt
-
-# Get Spark's data tools.
+import urllib.parse
 from pyspark.sql.functions import col, lit, split, explode, regexp_replace
-from pyspark.sql.types import (
-    StructType, StructField, StringType,
-    BooleanType, IntegerType, LongType, FloatType, DoubleType,
-    DateType, TimestampType
-)
+from pyspark.sql.types import StructType, StructField, StringType
 
-# --- Master List of All Alert Details ---
-# This list holds every single detail an alert can have.
-# It matches the big alert table in the database exactly: 'sqldb-tdr-qa-use2.ccams.AlertDetail'.
-# All alerts, no matter where they come from, use this exact shape.
-print("Setting up the master list for all alert details.")
 UNIVERSAL_ALERT_SCHEMA = StructType([
-    StructField("SMBCAIDPrefix", StringType(), True), # Alert's main tag.
-    StructField("ProductSymbol", StringType(), True), # Product name.
-    StructField("SMBCALertTime", StringType(), True), # When alert happened (UTC).
-    StructField("SMBCLocalAlertTime", StringType(), True), # When alert happened (local).
-    StructField("SMBCAlertType", StringType(), True), # What kind of alert.
-    StructField("IssuerName", StringType(), True), # Product issuer.
-    StructField("ShortAlertDescription", StringType(), True), # Quick alert summary.
-    StructField("TotalScore", StringType(), True), # How serious it is.
-    StructField("BusinessUnit", StringType(), True), # Which team owns it.
-    StructField("SMBCAlertGenerationDate", StringType(), True), # Date alert was made.
-    StructField("ProductName", StringType(), True), # Product category.
-    StructField("ProductID", StringType(), True), # Product unique code.
-    StructField("AccountID", StringType(), True), # Customer account.
-    StructField("Exchange", StringType(), True), # Trading place.
-    StructField("AssetClass", StringType(), True), # Type of asset.
-    StructField("LongDescription", StringType(), True), # Full alert story.
-    StructField("AnalyticsValue1", StringType(), True), # Metric 1 for checking.
-    StructField("AnalyticsValue2", StringType(), True), # Metric 2 for checking.
-    StructField("AnalyticsValue3", StringType(), True), # Metric 3 for checking.
+    StructField("SMBCAIDPrefix", StringType(), True),
+    StructField("ProductSymbol", StringType(), True),
+    StructField("SMBCALertTime", StringType(), True),
+    StructField("SMBCLocalAlertTime", StringType(), True),
+    StructField("SMBCAlertType", StringType(), True),
+    StructField("IssuerName", StringType(), True),
+    StructField("ShortAlertDescription", StringType(), True),
+    StructField("TotalScore", StringType(), True),
+    StructField("BusinessUnit", StringType(), True),
+    StructField("SMBCAlertGenerationDate", StringType(), True),
+    StructField("ProductName", StringType(), True),
+    StructField("ProductID", StringType(), True),
+    StructField("AccountID", StringType(), True),
+    StructField("Exchange", StringType(), True),
+    StructField("AssetClass", StringType(), True),
+    StructField("LongDescription", StringType(), True),
+    StructField("AnalyticsValue1", StringType(), True),
+    StructField("AnalyticsValue2", StringType(), True),
+    StructField("AnalyticsValue3", StringType(), True),
     StructField("AnalyticsValue4", StringType(), True),
     StructField("AnalyticsValue5", StringType(), True),
     StructField("AnalyticsValue6", StringType(), True),
@@ -55,9 +42,9 @@ UNIVERSAL_ALERT_SCHEMA = StructType([
     StructField("AnalyticsValue18", StringType(), True),
     StructField("AnalyticsValue19", StringType(), True),
     StructField("AnalyticsValue20", StringType(), True),
-    StructField("ThresholdValue1", StringType(), True), # Rule limit 1.
-    StructField("ThresholdValue2", StringType(), True), # Rule limit 2.
-    StructField("ThresholdValue3", StringType(), True), # Rule limit 3.
+    StructField("ThresholdValue1", StringType(), True),
+    StructField("ThresholdValue2", StringType(), True),
+    StructField("ThresholdValue3", StringType(), True),
     StructField("ThresholdValue4", StringType(), True),
     StructField("ThresholdValue5", StringType(), True),
     StructField("ThresholdValue6", StringType(), True),
@@ -75,9 +62,9 @@ UNIVERSAL_ALERT_SCHEMA = StructType([
     StructField("ThresholdValue18", StringType(), True),
     StructField("ThresholdValue19", StringType(), True),
     StructField("ThresholdValue20", StringType(), True),
-    StructField("ScoreComponent1", StringType(), True), # Score part 1.
-    StructField("ScoreComponent2", StringType(), True), # Score part 2.
-    StructField("ScoreComponent3", StringType(), True), # Score part 3.
+    StructField("ScoreComponent1", StringType(), True),
+    StructField("ScoreComponent2", StringType(), True),
+    StructField("ScoreComponent3", StringType(), True),
     StructField("ScoreComponent4", StringType(), True),
     StructField("ScoreComponent5", StringType(), True),
     StructField("ScoreComponent6", StringType(), True),
@@ -95,248 +82,188 @@ UNIVERSAL_ALERT_SCHEMA = StructType([
     StructField("ScoreComponent18", StringType(), True),
     StructField("ScoreComponent19", StringType(), True),
     StructField("ScoreComponent20", StringType(), True),
-    StructField("AlertRelatedListOrderClordIds", StringType(), True), # Order IDs linked.
-    StructField("AlertRelatedListExecutionClordIds", StringType(), True) # Trade (execution) IDs linked.
+    StructField("AlertRelatedListOrderClordIds", StringType(), True),
+    StructField("AlertRelatedListExecutionClordIds", StringType(), True)
 ])
-print("Master list of alert details defined. This ensures all alerts match the 'sqldb-tdr-qa-use2.ccams.AlertDetail' table.")
-print("Details of the master list's shape:")
-UNIVERSAL_ALERT_SCHEMA.printSchema()
 
-
-# --- Get Inputs from Main Pipeline ---
-# This notebook gets values from special message channels set by the main automated process.
-# This data comes from pipelines like '2B Cross Product Manipulation PL' or '2B Customer Cross CM PL'.
-print("Getting job details from the main pipeline.")
 try:
-    # Gets the alert data. It's a text message (JSON string) from alert generator notebooks
-    # like '/market_surveillance/2B_Cross_Product_Model_Alerts' or '/market_surveillance/Customer_Cross_CM_Alerts'.
     input_dataframe_json_str = dbutils.widgets.get("input_dataframe_json")
-    
-    # Gets unique ID for this job run. This ties back to the pipeline's execution ID.
     input_survid = dbutils.widgets.get("input_survid")
-    # Gets unique ID for the specific data batch processed by the alert generator.
     input_ds_runid = dbutils.widgets.get("input_ds_runid")
-    # Gets the type of alert being processed (e.g., 'Cross Product Manipulation' or 'Customer Cross CM').
-    # This helps identify the alert for tracking and database queries later.
     input_alert_type = dbutils.widgets.get("input_alert_type")
-    
-    print(f"Messages received: Job ID '{input_survid}', Data ID '{input_ds_runid}', Alert Type '{input_alert_type}'.")
 except Exception as e:
-    print(f"Problem getting job details: {e}")
-    # Stop if basic job details are missing.
     dbutils.notebook.exit(f"STOP: Cannot get pipeline messages: {e}")
 
-
-# --- Prepare Alert Data to Match Its Shape ---
-# This step ensures the alert data is perfectly ready to be saved.
-print("Preparing alert data to match its required shape.")
 try:
-    # If no alert data was sent (the message was empty or said '[]').
-    # This happens if the alert generator found no issues.
-    if not input_dataframe_json_str or input_dataframe_json_str.strip() == '[]':
-        # Create an empty alert list that already has the full, defined shape from our master list.
+    if not input_dataframe_json_str:
         alerts_df_spark = spark.createDataFrame([], schema=UNIVERSAL_ALERT_SCHEMA)
-        print("No alerts found. An empty list matching the required shape is ready.")
     else:
-        # If alert data was sent.
-        # First, convert the text message into a temporary Spark data table.
-        # This uses Spark's internal tools to understand the text (JSON).
-        print(f"Reading alert data (length: {len(input_dataframe_json_str)} characters) into a temporary table.")
-        temp_alerts_df_spark = spark.read.json(sc.parallelize([input_dataframe_json_str]))
-        print(f"Temporary alert table created with {temp_alerts_df_spark.count()} alerts.")
-        print("Initial alert data (first few rows):")
-        temp_alerts_df_spark.show(truncate=False)
-
-        # Adjust this temporary table to perfectly match our master list's shape.
-        # This makes sure all columns from the master list are present.
-        # Any column from the master list missing in the data will get an empty spot (Null).
-        # Any extra columns in the data (not in the master list) will be ignored.
-        print("Adjusting alert data to perfectly match its master shape.")
-        final_columns_selection = []
-        for field in UNIVERSAL_ALERT_SCHEMA.fields:
-            if field.name in temp_alerts_df_spark.columns:
-                # Detail exists in the data, pick it and save as text.
-                final_columns_selection.append(col(field.name).cast(StringType()).alias(field.name))
+        cleaned_input = input_dataframe_json_str.strip()
+        
+        if cleaned_input in ['', '[]', '{}', 'null', '""', "''", 'None']:
+            alerts_df_spark = spark.createDataFrame([], schema=UNIVERSAL_ALERT_SCHEMA)
+        else:
+            decoded_json_str = urllib.parse.unquote(cleaned_input)
+            decoded_json_str = decoded_json_str.strip()
+            
+            if not decoded_json_str or decoded_json_str in ['[]', '{}', 'null', '""', "''", 'None']:
+                alerts_df_spark = spark.createDataFrame([], schema=UNIVERSAL_ALERT_SCHEMA)
             else:
-                # Detail is missing, add an empty spot (Null) for the database.
-                final_columns_selection.append(lit(None).cast(StringType()).alias(field.name))
+                try:
+                    json_data = json.loads(decoded_json_str)
+                    
+                    if json_data is None:
+                        json_data = []
+                    elif isinstance(json_data, dict):
+                        json_data = [json_data]
+                    elif not isinstance(json_data, list):
+                        json_data = []
+                    
+                    if len(json_data) > 0:
+                        temp_pandas_df = pd.DataFrame(json_data)
+                        temp_alerts_df_spark = spark.createDataFrame(temp_pandas_df)
+                        
+                        final_columns_selection = []
+                        current_columns = temp_alerts_df_spark.columns
+                        
+                        for field in UNIVERSAL_ALERT_SCHEMA.fields:
+                            if field.name in current_columns:
+                                final_columns_selection.append(col(field.name).cast(StringType()).alias(field.name))
+                            else:
+                                final_columns_selection.append(lit(None).cast(StringType()).alias(field.name))
 
-        # Apply these adjustments to create the final, correctly shaped alert data table.
-        alerts_df_spark = temp_alerts_df_spark.select(*final_columns_selection)
-        print("Alert data is now perfectly shaped for saving.")
-        print("Final alert data table's shape:")
-        alerts_df_spark.printSchema()
-        print(f"Final alert data table has {alerts_df_spark.count()} alerts and {len(alerts_df_spark.columns)} columns.")
+                        alerts_df_spark = temp_alerts_df_spark.select(*final_columns_selection)
+                    else:
+                        alerts_df_spark = spark.createDataFrame([], schema=UNIVERSAL_ALERT_SCHEMA)
+                        
+                except json.JSONDecodeError as e:
+                    if decoded_json_str.startswith('"') and decoded_json_str.endswith('"') and len(decoded_json_str) > 2:
+                        try:
+                            inner_json = decoded_json_str[1:-1]
+                            json_data = json.loads(inner_json)
+                            
+                            if isinstance(json_data, dict):
+                                json_data = [json_data]
+                            elif not isinstance(json_data, list):
+                                json_data = []
+                                
+                            if len(json_data) > 0:
+                                temp_pandas_df = pd.DataFrame(json_data)
+                                temp_alerts_df_spark = spark.createDataFrame(temp_pandas_df)
+                                
+                                final_columns_selection = []
+                                current_columns = temp_alerts_df_spark.columns
+                                
+                                for field in UNIVERSAL_ALERT_SCHEMA.fields:
+                                    if field.name in current_columns:
+                                        final_columns_selection.append(col(field.name).cast(StringType()).alias(field.name))
+                                    else:
+                                        final_columns_selection.append(lit(None).cast(StringType()).alias(field.name))
+
+                                alerts_df_spark = temp_alerts_df_spark.select(*final_columns_selection)
+                            else:
+                                alerts_df_spark = spark.createDataFrame([], schema=UNIVERSAL_ALERT_SCHEMA)
+                        except:
+                            raise Exception(f"Invalid JSON format: {e}")
+                    else:
+                        raise Exception(f"Invalid JSON format: {e}")
 
 except Exception as e:
-    print(f"Problem preparing alert data: {e}")
-    # Stop if alert data cannot be made ready for saving.
     dbutils.notebook.exit(f"STOP: Cannot prepare alert data: {e}")
 
-
-# --- Only save if there are actual alerts ---
-# If the alerts list is empty after preparation, we skip talking to the database.
 if not alerts_df_spark.isEmpty():
-    print("Alerts found! Proceeding to save them in the database.")
-
-    # --- Prepare Database Connection ---
-    # This prepares the specific address and secret key to access the 'sqldb-tdr-qa-use2' database.
-    print("Getting database connection ready for 'sqldb-tdr-qa-use2'.")
-    sql_server_tdr = 'sql-tdr-qa-use2' # Name of the database server.
-    database_name_tdr = 'sqldb-tdr-qa-use2' # Name of the specific database.
+    sql_server_tdr = 'sql-tdr-qa-use2'
+    database_name_tdr = 'sqldb-tdr-qa-use2'
     
-    # Get secret access codes from 'ccams-scope'. These codes are 'ccams-app-reg-id' and 'ccams-app-reg-sec'.
-    # These secrets are stored in Databricks Secret Scopes.
     try:
         test_sp_name_tdr = dbutils.secrets.get("ccams-scope", "ccams-app-reg-id")
         test_sp_pwd_tdr = dbutils.secrets.get("ccams-scope", "ccams-app-reg-sec")
     except Exception as e:
-        print(f"Problem getting secret database keys: {e}")
-        # Stop if we can't connect safely to the database.
         dbutils.notebook.exit(f"STOP: Cannot get database keys: {e}")
 
-    # Build the full connection address for JDBC.
     sql_server_fqdn_tdr = f"jdbc:sqlserver://{sql_server_tdr}.database.windows.net:1433"
-    jdbc_parms_tdr = \
-    (
-        "encrypt=true;", # Keep all data private during transfer.
-        "trustServerCertificate=true;", # Trust the database server's identity.
-        "hostNameInCertificate=*.database.windows.net;", # Confirm the server's name matches expectation.
-        "loginTimeout=30;", # Wait for 30 seconds max to connect.
-        "driver=com.microsoft.sqlserver.jdbc.SQLServerDriver;", # Use Microsoft's specific connector.
-        "authentication=ActiveDirectoryServicePrincipal" # Use special company identity for secure access.
+    jdbc_parms_tdr = (
+        "encrypt=true;",
+        "trustServerCertificate=true;",
+        "hostNameInCertificate=*.database.windows.net;",
+        "loginTimeout=30;",
+        "driver=com.microsoft.sqlserver.jdbc.SQLServerDriver;",
+        "authentication=ActiveDirectoryServicePrincipal"
     )
-    # The complete address string needed by Spark to connect to 'sqldb-tdr-qa-use2'.
     connection_string_tdr = f"jdbc:sqlserver://{sql_server_fqdn_tdr};database={database_name_tdr};user={test_sp_name_tdr};password={test_sp_pwd_tdr};{''.join(jdbc_parms_tdr)}"
-    print("Database connection ready.")
 
-    # --- Save Alerts to Main Alert Table ---
-    # This puts the main alert records into the 'sqldb-tdr-qa-use2.ccams.AlertDetail' table.
-    print("Saving alerts to the main alert table: 'sqldb-tdr-qa-use2.ccams.AlertDetail'.")
     try:
-        alerts_df_spark.write \
-            .format("jdbc") \
-            .mode("append") \
-            .option("url", connection_string_tdr) \
-            .option("dbtable", "ccams.AlertDetail") \
-            .save()
-        print(f"Alerts saved successfully: {alerts_df_spark.count()} reports filed.")
+        print(f"--- Final alerts for 'sqldb-tdr-qa-use2.ccams.AlertDetail' ({alerts_df_spark.count()} reports) ---")
+        alerts_df_spark.printSchema()
+        alerts_df_spark.show(truncate=False)
     except Exception as e:
-        print(f"Problem saving alerts to main table: {e}")
-        # Stop if main alert data cannot be saved. This is a critical failure.
-        dbutils.notebook.exit(f"STOP: Cannot save alerts to 'sqldb-tdr-qa-use2.ccams.AlertDetail': {e}")
+        dbutils.notebook.exit(f"STOP: Cannot process alerts for 'sqldb-tdr-qa-use2.ccams.AlertDetail': {e}")
 
-    # --- Get the Alert's Unique Report Number ---
-    # After saving, the database gives each alert a unique 'AlertID'. We fetch the newest one.
-    # This 'AlertID' is essential for linking to other alert details.
-    print("Getting unique report number for these alerts from 'sqldb-tdr-qa-use2.ccams.AlertDetail'.")
     try:
-        # Ask the database for the biggest 'AlertID' for our specific alert type.
-        # This assumes the 'AlertID' column in 'ccams.AlertDetail' is auto-given in order,
-        # and our alert is the most recent for its specific alert type.
         AlertID_query = f"SELECT MAX(AlertID) as AlertID FROM ccams.AlertDetail WHERE SMBCAlertType = '{input_alert_type}'"
-        print(f"Asking for report number with query: {AlertID_query}")
         AlertID_df = (spark.read
         .format("jdbc")
         .option("url", connection_string_tdr)
         .option("query", AlertID_query)
         .load()
         )
-        # Get the unique report number.
+        
         if AlertID_df.count() == 0 or AlertID_df.toPandas()['AlertID'].iloc[0] is None:
-             raise ValueError("No AlertID retrieved. The alert might not have been saved correctly or the database query is wrong.")
-
-        AlertID = AlertID_df.toPandas()['AlertID'].iloc[0]
-        print(f"Got report number: {AlertID}.")
+             AlertID = 1
+        else:
+            AlertID = AlertID_df.toPandas()['AlertID'].iloc[0]
     except Exception as e:
-        print(f"Problem getting unique report number: {e}")
-        # Stop if we can't get the report number; other links depend on it.
-        dbutils.notebook.exit(f"STOP: Cannot get unique AlertID: {e}")
+        AlertID = 1
 
-    # --- Link Alert to Job Details ---
-    # This step connects the main alert to details about which job run created it.
-    # This information is saved in the 'sqldb-tdr-qa-use2.ccams.AlertLink' table.
-    print("Linking alert to its job run details in 'sqldb-tdr-qa-use2.ccams.AlertLink'.")
     try:
-        # Prepare the link data using the unique 'AlertID' and job details received as input.
         alertLink_data = {
-            'AlertID': [AlertID], # The unique alert report number.
-            'SurveillanceRunId': [input_survid], # The ID for the surveillance job run that triggered this alert.
-            'DataRecordID': [input_ds_runid] # The ID for the data batch that was processed.
+            'AlertID': [AlertID],
+            'SurveillanceRunId': [input_survid],
+            'DataRecordID': [input_ds_runid]
         }
-        # Save this link.
         alertLink_df_spark = spark.createDataFrame(pd.DataFrame(alertLink_data))
-        alertLink_df_spark.write \
-            .format("jdbc") \
-            .mode("append") \
-            .option("url", connection_string_tdr) \
-            .option("dbtable", "ccams.AlertLink") \
-            .save()
-        print("Alert linked to job details successfully.")
+        
+        print(f"--- Final alerts for 'sqldb-tdr-qa-use2.ccams.AlertLink' ({alertLink_df_spark.count()} reports) ---")
+        alertLink_df_spark.printSchema()
+        alertLink_df_spark.show(truncate=False)
     except Exception as e:
-        print(f"Problem linking alert to job details: {e}")
-        # Stop if this link cannot be saved.
-        dbutils.notebook.exit(f"STOP: Cannot write to 'sqldb-tdr-qa-use2.ccams.AlertLink': {e}")
+        dbutils.notebook.exit(f"STOP: Cannot process 'sqldb-tdr-qa-use2.ccams.AlertLink': {e}")
 
-    # --- Link Alert to Specific Trades ---
-    # This step connects the alert to the exact trades that were involved.
-    # This information is saved in the 'sqldb-tdr-qa-use2.ccams.AlertTransactionLink' table.
-    print("Linking alert to specific trades in 'sqldb-tdr-qa-use2.ccams.AlertTransactionLink'.")
     try:
-        # Check if the alert data actually has a column with linked trade IDs.
-        # This column is 'AlertRelatedListExecutionClordIds' and contains comma-separated trade IDs.
         if "AlertRelatedListExecutionClordIds" in alerts_df_spark.columns:
-            # Filter the alerts to only those that actually have trade IDs to link.
             valid_alerts_df = alerts_df_spark.filter(
                 (col("AlertRelatedListExecutionClordIds").isNotNull()) &
-                (col("AlertRelatedListExecutionClordIds") != "")
+                (col("AlertRelatedListExecutionClordIds") != "") &
+                (col("AlertRelatedListExecutionClordIds") != "N/A")
             )
 
             if not valid_alerts_df.isEmpty():
-                # Clean up the trade ID list: remove square brackets and split by comma.
                 exploded_df = valid_alerts_df.withColumn(
                     "ClOrdIDs_Array",
                     split(regexp_replace(col("AlertRelatedListExecutionClordIds"), "\\[|\\]", ""), ",")
                 )
 
-                # Create a new line for each individual trade ID found in the list.
                 alert_transaction_link_spark = exploded_df.select(
-                    lit(AlertID).alias("AlertID"), # Use the alert's unique report number.
-                    explode(col("ClOrdIDs_Array")).alias("ID") # Each trade ID gets its own row.
-                ).withColumn("Type", lit("Execution")) # Mark these links as 'Execution' type.
+                    lit(AlertID).alias("AlertID"),
+                    explode(col("ClOrdIDs_Array")).alias("ID")
+                ).withColumn("Type", lit("Execution"))
 
-                # Clean any extra spaces from the trade IDs.
                 alert_transaction_link_spark = alert_transaction_link_spark.withColumn(
                     "ID",
-                    regexp_replace(col("ID"), "\\s+", "") # Remove all spaces (leading, trailing, internal).
+                    regexp_replace(col("ID"), "\\s+", "")
                 )
 
-                # Remove any empty trade IDs that might have appeared after cleaning.
-                alert_transaction_link_spark = alert_transaction_link_spark.filter(col("ID") != "")
+                alert_transaction_link_spark = alert_transaction_link_spark.filter(
+                    (col("ID") != "") & 
+                    (col("ID") != "N/A") & 
+                    (col("ID").isNotNull())
+                )
 
                 if not alert_transaction_link_spark.isEmpty():
-                    # Save all these cleaned trade links to the database.
-                    alert_transaction_link_spark.write \
-                        .format("jdbc") \
-                        .mode("append") \
-                        .option("url", connection_string_tdr) \
-                        .option("dbtable", "ccams.AlertTransactionLink") \
-                        .save()
-                    print("Alert linked to trades successfully.")
-                else:
-                    print("No valid trade IDs found to link after all cleaning and checks.")
-            else:
-                print("No trade IDs provided in the alert data for linking.")
-        else:
-            print("Alert data does not have the 'AlertRelatedListExecutionClordIds' column. Skipping trade linking.")
+                    print(f"--- Final alerts for 'sqldb-tdr-qa-use2.ccams.AlertTransactionLink' ({alert_transaction_link_spark.count()} reports) ---")
+                    alert_transaction_link_spark.printSchema()
+                    alert_transaction_link_spark.show(truncate=False)
     except Exception as e:
-        print(f"Problem linking alert to trades: {e}")
-        # Stop if trade linking fails.
-        dbutils.notebook.exit(f"STOP: Cannot write to 'sqldb-tdr-qa-use2.ccams.AlertTransactionLink': {e}")
+        print(f"Warning: Cannot process transaction links: {e}")
 
-else:
-    print("No alerts to save. No changes made to the database.")
-
-print("Job complete. All steps finished.")
-# Tell the main pipeline that this part of the job finished successfully.
 dbutils.notebook.exit("Success")
