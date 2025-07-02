@@ -1,0 +1,56 @@
+{
+    "name": "Ask_ADF_who_Is_Writing",
+    "type": "WebActivity",
+    "dependsOn": [],
+    "policy": {
+        "timeout": "0.12:00:00",
+        "retry": 0,
+        "retryIntervalInSeconds": 30,
+        "secureOutput": false,
+        "secureInput": false
+    },
+    "userProperties": [],
+    "typeProperties": {
+        "method": "POST",
+        "url": {
+            "value": "@concat('https://management.azure.com/subscriptions/', pipeline().globalParameters.SubscriptionID, '/resourceGroups/', pipeline().globalParameters.ccamsResourceGroup, '/providers/Microsoft.DataFactory/factories/', pipeline().globalParameters.DatafactoryName, '/queryPipelineRuns?api-version=2018-06-01')",
+            "type": "Expression"
+        },
+        "body": {
+            "value": "{\n \"lastUpdatedAfter\": \"@{adddays(utcnow(),-2)}\",\n \"lastUpdatedBefore\": \"@{utcnow()}\",\n \"filters\": [{\n \"operand\": \"PipelineName\",\n \"operator\": \"Equals\",\n \"values\": [\"Common_Write_to_DB_Pipeline\"]\n }]\n}",
+            "type": "Expression"
+        },
+        "headers": {
+            "Content-Type": "application/json"
+        },
+        "authentication": {
+            "type": "ServicePrincipal",
+            "userTenant": {
+                "value": "@pipeline().globalParameters.TenantID",
+                "type": "Expression"
+            },
+            "username": {
+                "value": "@pipeline().globalParameters.ServicePrincipalID",
+                "type": "Expression"
+            },
+            "resource": {
+                "value": "https://management.azure.com",
+                "type": "Expression"
+            },
+            "password": {
+                "type": "AzureKeyVaultSecret",
+                "store": {
+                    "referenceName": "ls_ccams_kv",
+                    "type": "LinkedServiceReference",
+                    "parameters": {
+                        "keyvault_uri": {
+                            "value": "@pipeline().globalParameters.ccamsKeyVault",
+                            "type": "Expression"
+                        }
+                    }
+                },
+                "secretName": "secret"
+            }
+        }
+    }
+}
