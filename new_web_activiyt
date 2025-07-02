@@ -1,0 +1,59 @@
+https://management.azure.com/subscriptions/4b643f6a-df52-44bd-8b8e-b20ea31e75a8/resourceGroups/rg-ccams-qa-use2/providers/Microsoft.DataFactory/factories/adf-ccams-qa-use2-01/queryPipelineRuns?api-version=2018-06-01
+
+Method Field:
+
+Click dropdown and select: POST
+
+Body Field:
+Copy and paste this exact body:
+
+{
+ "lastUpdatedAfter": "@{adddays(utcnow(),-2)}",
+ "lastUpdatedBefore": "@{utcnow()}",
+ "filters": [{
+  "operand": "PipelineName",
+  "operator": "Equals",
+  "values": ["Common_Write_to_DB_Pipeline"]
+ }]
+}
+
+Step 2: Headers Section
+
+Click "+ New" button under Headers
+Enter:
+
+Name: Content-Type
+Value: application/json
+
+
+
+Step 3: Authentication Section
+
+Authentication dropdown: Select Service Principal
+Resource field: Enter https://management.azure.com
+Tenant field: Enter c7f6413d-1e73-45d2-b0da-a68713b515a7
+Service principal ID field: Enter 0cb0296f-4e6c-4470-81de-8d24aae51284
+
+Service Principal Key:
+
+Click dropdown next to Service principal key
+Select: Azure Key Vault
+Azure Key Vault linked service: Select ls_ccams_kv from dropdown
+Secret name field: Enter secret
+
+Step 4: Advanced Settings
+
+Click "Advanced" tab
+Timeout: Enter 0.12:00:00
+Retry: Enter 0
+Retry interval: Enter 30
+Leave Secure input and Secure output unchecked
+
+Step 5: Save and Validate
+
+Click empty area of pipeline canvas
+Click "Validate" button in top toolbar
+Fix any errors shown
+Click "Publish all" to save
+
+Follow these exact steps in order. Each field must be filled exactly as specified.
