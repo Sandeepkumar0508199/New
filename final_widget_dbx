@@ -1,0 +1,252 @@
+import pandas as pd
+import json
+import urllib.parse
+from pyspark.sql.functions import col, lit, split, explode, regexp_replace
+from pyspark.sql.types import StructType, StructField, StringType
+
+ALERT_SCHEMA = StructType([
+    StructField("SMBCAIDPrefix", StringType(), True),
+    StructField("ProductSymbol", StringType(), True),
+    StructField("SMBCALertTime", StringType(), True),
+    StructField("SMBCLocalAlertTime", StringType(), True),
+    StructField("SMBCAlertType", StringType(), True),
+    StructField("IssuerName", StringType(), True),
+    StructField("ShortAlertDescription", StringType(), True),
+    StructField("TotalScore", StringType(), True),
+    StructField("BusinessUnit", StringType(), True),
+    StructField("SMBCAlertGenerationDate", StringType(), True),
+    StructField("ProductName", StringType(), True),
+    StructField("ProductID", StringType(), True),
+    StructField("AccountID", StringType(), True),
+    StructField("Exchange", StringType(), True),
+    StructField("AssetClass", StringType(), True),
+    StructField("LongDescription", StringType(), True),
+    StructField("AnalyticsValue1", StringType(), True),
+    StructField("AnalyticsValue2", StringType(), True),
+    StructField("AnalyticsValue3", StringType(), True),
+    StructField("AnalyticsValue4", StringType(), True),
+    StructField("AnalyticsValue5", StringType(), True),
+    StructField("AnalyticsValue6", StringType(), True),
+    StructField("AnalyticsValue7", StringType(), True),
+    StructField("AnalyticsValue8", StringType(), True),
+    StructField("AnalyticsValue9", StringType(), True),
+    StructField("AnalyticsValue10", StringType(), True),
+    StructField("AnalyticsValue11", StringType(), True),
+    StructField("AnalyticsValue12", StringType(), True),
+    StructField("AnalyticsValue13", StringType(), True),
+    StructField("AnalyticsValue14", StringType(), True),
+    StructField("AnalyticsValue15", StringType(), True),
+    StructField("AnalyticsValue16", StringType(), True),
+    StructField("AnalyticsValue17", StringType(), True),
+    StructField("AnalyticsValue18", StringType(), True),
+    StructField("AnalyticsValue19", StringType(), True),
+    StructField("AnalyticsValue20", StringType(), True),
+    StructField("ThresholdValue1", StringType(), True),
+    StructField("ThresholdValue2", StringType(), True),
+    StructField("ThresholdValue3", StringType(), True),
+    StructField("ThresholdValue4", StringType(), True),
+    StructField("ThresholdValue5", StringType(), True),
+    StructField("ThresholdValue6", StringType(), True),
+    StructField("ThresholdValue7", StringType(), True),
+    StructField("ThresholdValue8", StringType(), True),
+    StructField("ThresholdValue9", StringType(), True),
+    StructField("ThresholdValue10", StringType(), True),
+    StructField("ThresholdValue11", StringType(), True),
+    StructField("ThresholdValue12", StringType(), True),
+    StructField("ThresholdValue13", StringType(), True),
+    StructField("ThresholdValue14", StringType(), True),
+    StructField("ThresholdValue15", StringType(), True),
+    StructField("ThresholdValue16", StringType(), True),
+    StructField("ThresholdValue17", StringType(), True),
+    StructField("ThresholdValue18", StringType(), True),
+    StructField("ThresholdValue19", StringType(), True),
+    StructField("ThresholdValue20", StringType(), True),
+    StructField("ScoreComponent1", StringType(), True),
+    StructField("ScoreComponent2", StringType(), True),
+    StructField("ScoreComponent3", StringType(), True),
+    StructField("ScoreComponent4", StringType(), True),
+    StructField("ScoreComponent5", StringType(), True),
+    StructField("ScoreComponent6", StringType(), True),
+    StructField("ScoreComponent7", StringType(), True),
+    StructField("ScoreComponent8", StringType(), True),
+    StructField("ScoreComponent9", StringType(), True),
+    StructField("ScoreComponent10", StringType(), True),
+    StructField("ScoreComponent11", StringType(), True),
+    StructField("ScoreComponent12", StringType(), True),
+    StructField("ScoreComponent13", StringType(), True),
+    StructField("ScoreComponent14", StringType(), True),
+    StructField("ScoreComponent15", StringType(), True),
+    StructField("ScoreComponent16", StringType(), True),
+    StructField("ScoreComponent17", StringType(), True),
+    StructField("ScoreComponent18", StringType(), True),
+    StructField("ScoreComponent19", StringType(), True),
+    StructField("ScoreComponent20", StringType(), True),
+    StructField("AlertRelatedListOrderClordIds", StringType(), True),
+    StructField("AlertRelatedListExecutionClordIds", StringType(), True)
+])
+
+dbutils.widgets.text("input_dataframe_json", "[{\"SMBCAIDPrefix\": \"TEST_Alert\",\"ProductSymbol\": \"USDJPY\",\"SMBCALertTime\": \"2025-06-29 10:00:00.000\",\"SMBCLocalAlertTime\": \"2025-06-29 06:00:00.000\",\"SMBCAlertType\": \"Test Alert Type\",\"IssuerName\": \"N/A\",\"ShortAlertDescription\": \"Test Alert from Debug Run\",\"TotalScore\": \"50\",\"BusinessUnit\": \"Test Unit\",\"SMBCAlertGenerationDate\": \"2025-06-29 06:00:00.000\",\"ProductName\": \"Test Product\",\"ProductID\": \"TEST-PROD-001\",\"AccountID\": \"TESTACC001\",\"Exchange\": \"N/A\",\"AssetClass\": \"FX\",\"LongDescription\": \"This is a test alert generated manually for debugging.\",\"AnalyticsValue1\": \"Test Analytics 1\",\"AnalyticsValue2\": \"Test Analytics 2\",\"AnalyticsValue3\": \"Test Analytics 3\",\"ThresholdValue1\": \"Test Threshold 1\",\"ThresholdValue2\": \"Test Threshold 2\",\"ThresholdValue3\": \"Test Threshold 3\",\"AlertRelatedListOrderClordIds\": \"N/A\",\"AlertRelatedListExecutionClordIds\": \"EXECID_A,EXECID_B\"}]")
+dbutils.widgets.text("input_survid", "20250702-143025-test123")
+dbutils.widgets.text("input_ds_runid", "20250702-dataset456")
+dbutils.widgets.text("input_alert_type", "Cross Product Manipulation")
+
+input_json = dbutils.widgets.get("input_dataframe_json")
+survid = dbutils.widgets.get("input_survid")
+ds_runid = dbutils.widgets.get("input_ds_runid")
+alert_type = dbutils.widgets.get("input_alert_type")
+
+print(f"Surveillance ID: {survid}")
+print(f"Dataset Run ID: {ds_runid}")
+print(f"Alert Type: {alert_type}")
+print(f"JSON data length: {len(input_json)} characters")
+
+if not input_json or input_json.strip() in ['', '[]', '{}', 'null']:
+    alerts_df = spark.createDataFrame([], schema=ALERT_SCHEMA)
+    print("No alerts found")
+else:
+    clean_input = input_json.strip()
+    decoded_json = urllib.parse.unquote(clean_input)
+    
+    try:
+        json_data = json.loads(decoded_json)
+        
+        if isinstance(json_data, dict):
+            json_data = [json_data]
+        elif not isinstance(json_data, list):
+            json_data = []
+        
+        if len(json_data) > 0:
+            pandas_df = pd.DataFrame(json_data)
+            temp_df = spark.createDataFrame(pandas_df)
+            
+            columns = []
+            for field in ALERT_SCHEMA.fields:
+                if field.name in temp_df.columns:
+                    columns.append(col(field.name).cast(StringType()).alias(field.name))
+                else:
+                    columns.append(lit(None).cast(StringType()).alias(field.name))
+            
+            alerts_df = temp_df.select(*columns)
+            print(f"Processed {alerts_df.count()} alerts")
+        else:
+            alerts_df = spark.createDataFrame([], schema=ALERT_SCHEMA)
+            print("Empty JSON data")
+            
+    except json.JSONDecodeError:
+        if decoded_json.startswith('"') and decoded_json.endswith('"'):
+            try:
+                inner_json = decoded_json[1:-1]
+                json_data = json.loads(inner_json)
+                if isinstance(json_data, dict):
+                    json_data = [json_data]
+                pandas_df = pd.DataFrame(json_data)
+                temp_df = spark.createDataFrame(pandas_df)
+                
+                columns = []
+                for field in ALERT_SCHEMA.fields:
+                    if field.name in temp_df.columns:
+                        columns.append(col(field.name).cast(StringType()).alias(field.name))
+                    else:
+                        columns.append(lit(None).cast(StringType()).alias(field.name))
+                
+                alerts_df = temp_df.select(*columns)
+                print(f"Fixed JSON and processed {alerts_df.count()} alerts")
+            except:
+                alerts_df = spark.createDataFrame([], schema=ALERT_SCHEMA)
+                print("Could not parse JSON")
+        else:
+            alerts_df = spark.createDataFrame([], schema=ALERT_SCHEMA)
+            print("Invalid JSON format")
+
+if alerts_df.count() > 0:
+    print("\nAlert Details Table:")
+    print(f"Records: {alerts_df.count()}")
+    alerts_df.printSchema()
+    alerts_df.show(truncate=False)
+    
+    sql_server_tdr = 'sql-tdr-qa-use2'
+    database_name_tdr = 'sqldb-tdr-qa-use2'
+    
+    try:
+        test_sp_name_tdr = dbutils.secrets.get("ccams-scope", "ccams-app-reg-id")
+        test_sp_pwd_tdr = dbutils.secrets.get("ccams-scope", "ccams-app-reg-sec")
+    except Exception as e:
+        print(f"Cannot get database keys: {e}")
+        dbutils.notebook.exit(f"STOP: Cannot get database keys: {e}")
+
+    sql_server_fqdn_tdr = f"jdbc:sqlserver://{sql_server_tdr}.database.windows.net:1433"
+    jdbc_parms_tdr = (
+        "encrypt=true;",
+        "trustServerCertificate=true;",
+        "hostNameInCertificate=*.database.windows.net;",
+        "loginTimeout=30;",
+        "driver=com.microsoft.sqlserver.jdbc.SQLServerDriver;",
+        "authentication=ActiveDirectoryServicePrincipal"
+    )
+    connection_string_tdr = f"jdbc:sqlserver://{sql_server_fqdn_tdr};database={database_name_tdr};user={test_sp_name_tdr};password={test_sp_pwd_tdr};{''.join(jdbc_parms_tdr)}"
+
+    try:
+        AlertID_query = f"SELECT MAX(AlertID) as AlertID FROM ccams.AlertDetail WHERE SMBCAlertType = '{alert_type}'"
+        AlertID_df = (spark.read
+        .format("jdbc")
+        .option("url", connection_string_tdr)
+        .option("query", AlertID_query)
+        .load()
+        )
+        
+        if AlertID_df.count() == 0 or AlertID_df.toPandas()['AlertID'].iloc[0] is None:
+             AlertID = 1
+        else:
+            AlertID = AlertID_df.toPandas()['AlertID'].iloc[0]
+    except Exception as e:
+        AlertID = 1
+
+    link_data = pd.DataFrame({
+        'AlertID': [AlertID],
+        'SurveillanceRunId': [survid],
+        'DataRecordID': [ds_runid]
+    })
+    link_df = spark.createDataFrame(link_data)
+    
+    print("\nAlert Links Table:")
+    print(f"Records: {link_df.count()}")
+    link_df.printSchema()
+    link_df.show(truncate=False)
+    
+    execution_col = "AlertRelatedListExecutionClordIds"
+    if execution_col in alerts_df.columns:
+        valid_executions = alerts_df.filter(
+            (col(execution_col).isNotNull()) & 
+            (col(execution_col) != "") & 
+            (col(execution_col) != "N/A")
+        )
+        
+        if valid_executions.count() > 0:
+            exploded = valid_executions.withColumn(
+                "exec_array",
+                split(regexp_replace(col(execution_col), "\\[|\\]", ""), ",")
+            )
+            
+            transaction_links = exploded.select(
+                lit(AlertID).alias("AlertID"),
+                explode(col("exec_array")).alias("ID")
+            ).withColumn("Type", lit("Execution"))
+            
+            transaction_links = transaction_links.withColumn(
+                "ID", 
+                regexp_replace(col("ID"), "\\s+", "")
+            ).filter(
+                (col("ID") != "") & 
+                (col("ID") != "N/A") & 
+                (col("ID").isNotNull())
+            )
+            
+            if transaction_links.count() > 0:
+                print("\nTransaction Links Table:")
+                print(f"Records: {transaction_links.count()}")
+                transaction_links.printSchema()
+                transaction_links.show(truncate=False)
+else:
+    print("No alerts to display")
+
+print("Job completed")
