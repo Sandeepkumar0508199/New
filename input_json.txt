@@ -1,24 +1,2 @@
-[
-  {
-    "SMBCAIDPrefix": "TEST_Alert",
-    "ProductSymbol": "USDJPY",
-    "SMBCALertTime": "2025-06-29 10:00:00.000",
-    "SMBCLocalAlertTime": "2025-06-29 06:00:00.000",
-    "SMBCAlertType": "Test Alert Type",
-    "IssuerName": "N/A",
-    "ShortAlertDescription": "Test Alert from Debug Run",
-    "TotalScore": "0",
-    "BusinessUnit": "Test Unit",
-    "SMBCAlertGenerationDate": "2025-06-29 06:00:00.000",
-    "ProductName": "Test Product",
-    "ProductID": "TEST-PROD-001",
-    "AccountID": "TESTACC001",
-    "Exchange": "N/A",
-    "AssetClass": "FX",
-    "LongDescription": "This is a test alert generated manually for debugging.",
-    "AnalyticsValue1": "Test Analytics 1", "AnalyticsValue2": "Test Analytics 2", "AnalyticsValue3": "Test Analytics 3",
-    "ThresholdValue1": "Test Threshold 1", "ThresholdValue2": "Test Threshold 2", "ThresholdValue3": "Test Threshold 3",
-    "AlertRelatedListOrderClordIds": "N/A",
-    "AlertRelatedListExecutionClordIds": "EXECID_A,EXECID_B"
-  }
-]
+"[{\"SMBCAIDPrefix\": \"TEST_Alert\",\"ProductSymbol\": \"USDJPY\",\"SMBCALertTime\": \"2025-06-29 10:00:00.000\",\"SMBCLocalAlertTime\": \"2025-06-29 06:00:00.000\",\"SMBCAlertType\": \"Test Alert Type\",\"IssuerName\": \"N/A\",\"ShortAlertDescription\": \"Test Alert from Debug Run\",\"TotalScore\": \"50\",\"BusinessUnit\": \"Test Unit\",\"SMBCAlertGenerationDate\": \"2025-06-29 06:00:00.000\",\"ProductName\": \"Test Product\",\"ProductID\": \"TEST-PROD-001\",\"AccountID\": \"TESTACC001\",\"Exchange\": \"N/A\",\"AssetClass\": \"FX\",\"LongDescription\": \"This is a test alert generated manually for debugging.\",\"AnalyticsValue1\": \"Test Analytics 1\",\"AnalyticsValue2\": \"Test Analytics 2\",\"AnalyticsValue3\": \"Test Analytics 3\",\"ThresholdValue1\": \"Test Threshold 1\",\"ThresholdValue2\": \"Test Threshold 2\",\"ThresholdValue3\": \"Test Threshold 3\",\"AlertRelatedListOrderClordIds\": \"N/A\",\"AlertRelatedListExecutionClordIds\": \"EXECID_A,EXECID_B\"}]"
+
