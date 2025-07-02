@@ -1,10 +1,12 @@
-# Databricks Notebook: Common_DB_Write_Notebook
+# Databricks Notebook: Common_DB_Write_Notebook - FIXED VERSION
 
 # Get data tools.
 import pandas as pd
 import json
 import datetime as dt
 import urllib.parse # Used to decode URL-encoded input strings.
+import tempfile
+import os
 
 # Get Spark's data tools.
 from pyspark.sql.functions import col, lit, split, explode, regexp_replace
@@ -100,9 +102,7 @@ UNIVERSAL_ALERT_SCHEMA = StructType([
     StructField("AlertRelatedListExecutionClordIds", StringType(), True) # Trade (execution) IDs linked.
 ])
 print("Master list of alert details defined. This ensures all alerts match the 'sqldb-tdr-qa-use2.ccams.AlertDetail' table.")
-# FIX: Corrected from .printSchema() to direct print of the StructType object.
-print(f"Details of the master list's shape: {UNIVERSAL_ALERT_SCHEMA}")
-
+print(f"Details of the master list's shape: {len(UNIVERSAL_ALERT_SCHEMA.fields)} fields defined")
 
 # --- Get Inputs from Main Pipeline ---
 # This notebook gets values from special message channels set by the main automated process.
@@ -122,11 +122,11 @@ try:
     input_alert_type = dbutils.widgets.get("input_alert_type")
     
     print(f"Messages received: Job ID '{input_survid}', Data ID '{input_ds_runid}', Alert Type '{input_alert_type}'.")
+    print(f"Raw input_dataframe_json_str length: {len(input_dataframe_json_str)} characters")
 except Exception as e:
     print(f"Problem getting job details: {e}")
     # Stop if basic job details are missing.
     dbutils.notebook.exit(f"STOP: Cannot get pipeline messages: {e}")
-
 
 # --- Prepare Alert Data to Match Its Shape ---
 # This step ensures the alert data is perfectly ready to be saved.
@@ -140,16 +140,47 @@ try:
         print("No alerts found. An empty list matching the required shape is ready.")
     else:
         # If alert data was sent.
-        # First, convert the text message into a temporary Spark data table.
-        print(f"Reading alert data (length: {len(input_dataframe_json_str)} characters) into a temporary table.")
-        # FIX: URL-decode the string to handle %0A, %22 etc. and then directly pass to spark.read.json.
-        # This resolves java.net.URISyntaxException and Spark Connect RDD issues.
+        # FIXED: Properly handle URL-encoded JSON string for Spark Connect compatibility
+        print(f"Processing alert data (length: {len(input_dataframe_json_str)} characters).")
+        
+        # Step 1: URL-decode the string to handle %0A, %22 etc.
         decoded_json_str = urllib.parse.unquote(input_dataframe_json_str)
         print(f"Decoded JSON string length: {len(decoded_json_str)} characters.")
-        temp_alerts_df_spark = spark.read.json([decoded_json_str]) # Corrected: Direct list passing for Spark Connect.
-        print(f"Temporary alert table created with {temp_alerts_df_spark.count()} alerts.")
-        print("Initial alert data (first few rows):")
-        temp_alerts_df_spark.show(truncate=False)
+        
+        # Step 2: Parse JSON to verify structure and convert to proper format
+        try:
+            # Parse the JSON string to validate it and get Python objects
+            json_data = json.loads(decoded_json_str)
+            print(f"Successfully parsed JSON with {len(json_data)} records")
+            
+            # If it's a single record, wrap it in a list
+            if isinstance(json_data, dict):
+                json_data = [json_data]
+            
+            # Step 3: Create DataFrame using createDataFrame from Python objects (Spark Connect compatible)
+            if len(json_data) > 0:
+                # Convert to pandas first for easier handling, then to Spark
+                temp_pandas_df = pd.DataFrame(json_data)
+                print(f"Converted to pandas DataFrame: {temp_pandas_df.shape}")
+                
+                # Create Spark DataFrame from pandas (this works with Spark Connect)
+                temp_alerts_df_spark = spark.createDataFrame(temp_pandas_df)
+                print(f"Created Spark DataFrame with {temp_alerts_df_spark.count()} alerts and {len(temp_alerts_df_spark.columns)} columns.")
+            else:
+                # Empty data case
+                temp_alerts_df_spark = spark.createDataFrame([], schema=UNIVERSAL_ALERT_SCHEMA)
+                print("Empty alert data - created empty DataFrame with universal schema.")
+                
+        except json.JSONDecodeError as e:
+            print(f"JSON parsing error: {e}")
+            print(f"First 200 characters of decoded string: {decoded_json_str[:200]}")
+            raise Exception(f"Invalid JSON format in input_dataframe_json: {e}")
+        
+        print("Initial alert data structure:")
+        temp_alerts_df_spark.printSchema()
+        if not temp_alerts_df_spark.isEmpty():
+            print("Sample data (first 2 rows):")
+            temp_alerts_df_spark.show(2, truncate=False)
 
         # Adjust this temporary table to perfectly match our master list's shape.
         # This makes sure all columns from the master list are present.
@@ -157,26 +188,34 @@ try:
         # Any extra columns in the data (not in the master list) will be ignored.
         print("Adjusting alert data to perfectly match its master shape.")
         final_columns_selection = []
+        
+        # Get current column names for comparison
+        current_columns = temp_alerts_df_spark.columns
+        print(f"Current columns in alert data: {current_columns}")
+        
         for field in UNIVERSAL_ALERT_SCHEMA.fields:
-            if field.name in temp_alerts_df_spark.columns:
+            if field.name in current_columns:
                 # Detail exists in the data, pick it and save as text.
                 final_columns_selection.append(col(field.name).cast(StringType()).alias(field.name))
+                print(f"  ✓ Found column: {field.name}")
             else:
                 # Detail is missing, add it as an empty spot (Null) for the database.
                 final_columns_selection.append(lit(None).cast(StringType()).alias(field.name))
+                print(f"  + Adding missing column: {field.name}")
 
         # Apply these adjustments to create the final, correctly shaped alert data table.
         alerts_df_spark = temp_alerts_df_spark.select(*final_columns_selection)
         print("Alert data is now perfectly shaped for saving.")
         print("Final alert data table's shape:")
-        alerts_df_spark.printSchema() # This correctly prints the DataFrame's schema.
+        alerts_df_spark.printSchema()
         print(f"Final alert data table has {alerts_df_spark.count()} alerts and {len(alerts_df_spark.columns)} columns.")
 
 except Exception as e:
     print(f"Problem preparing alert data: {e}")
+    import traceback
+    print(f"Full error trace: {traceback.format_exc()}")
     # Stop if alert data cannot be made ready for saving.
     dbutils.notebook.exit(f"STOP: Cannot prepare alert data: {e}")
-
 
 # --- Only save if there are actual alerts ---
 # If the alerts list is empty after preparation, we skip talking to the database.
@@ -201,8 +240,7 @@ if not alerts_df_spark.isEmpty():
 
     # Build the full connection address for JDBC.
     sql_server_fqdn_tdr = f"jdbc:sqlserver://{sql_server_tdr}.database.windows.net:1433"
-    jdbc_parms_tdr = \
-    (
+    jdbc_parms_tdr = (
         "encrypt=true;", # Keep all data private during transfer.
         "trustServerCertificate=true;", # Trust the database server's identity.
         "hostNameInCertificate=*.database.windows.net;", # Confirm the server's name matches expectation.
