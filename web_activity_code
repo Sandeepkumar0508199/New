@@ -119,6 +119,37 @@ Wait on completion: ✅ Checked
 
 Parameters tab:
 
+Parameter 1:
+
+Name: PatternAlertsJson
+Type: String
+Default value: Leave empty or add test JSON
+
+Parameter 2:
+
+Name: PatternSurveillanceRunId
+Type: String
+Default value: Leave empty
+
+Parameter 3:
+
+Name: PatternDatasetRunId
+Type: String
+Default value: Leave empty
+
+Parameter 4:
+
+Name: PatternAlertType
+Type: String
+Default value: Leave empty
+
+Step 2: After Creating Parameters
+
+Go back to your Execute Pipeline activity
+Click "Parameters" tab
+You should now see 4 input fields matching your target pipeline parameters
+Fill them with expressions:
+
 alertsJsonInput: @pipeline().parameters.PatternAlertsJson
 surveillanceRunIDInput: @pipeline().parameters.PatternSurveillanceRunId
 datasetRunIdInput: @pipeline().parameters.PatternDatasetRunId
