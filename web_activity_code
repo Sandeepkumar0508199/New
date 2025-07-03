@@ -1,3 +1,17 @@
+updated #1
+
+{
+ "lastUpdatedAfter": "@{adddays(utcnow(),-2)}",
+ "lastUpdatedBefore": "@{utcnow()}",
+ "filters": [{
+  "operand": "PipelineName",
+  "operator": "Equals",
+  "values": ["Common Write to DB Pipeline"]
+ }]
+}
+
+----------------
+
 {
     "name": "Ask_ADF_who_Is_Writing",
     "type": "WebActivity",
