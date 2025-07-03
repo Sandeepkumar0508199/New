@@ -1,3 +1,161 @@
+Update#3
+
+Complete Step-by-Step ADF Activity Setup
+Step 1: Create Until Activity
+
+Drag "Until" activity from Activities panel
+Name: Until_Shared_Writer_Is_Free
+Go to "Settings" tab
+Expression: @equals(int(variables('activeRuns')), 0)
+Timeout: 7.00:00:00
+
+Step 2: Create Pipeline Variable
+
+Click empty pipeline canvas
+Go to "Variables" tab at bottom
+Click "+ New"
+Name: activeRuns
+Type: String
+Default value: 1
+
+Step 3: Add WebActivity Inside Until
+
+Drag "Web" activity into the Until box
+Name: Ask_ADF_who_Is_Writing
+Settings tab:
+
+URL: https://management.azure.com/subscriptions/4b643f6a-df52-44bd-8b8e-b20ea31e75a8/resourceGroups/rg-ccams-qa-use2/providers/Microsoft.DataFactory/factories/adf-ccams-qa-use2-01/queryPipelineRuns?api-version=2018-06-01
+Method: POST
+Body:
+
+{
+ "lastUpdatedAfter": "@{adddays(utcnow(),-2)}",
+ "lastUpdatedBefore": "@{utcnow()}",
+ "filters": [{
+  "operand": "PipelineName",
+  "operator": "Equals",
+  "values": ["Common Write to DB Pipeline"]
+ }]
+}
+
+Headers: Click "+ New"
+
+Name: Content-Type
+Value: application/json
+
+
+Authentication: Service Principal
+
+Resource: https://management.azure.com
+Tenant: c7f6413d-1e73-45d2-b0da-a68713b515a7
+Service principal ID: 0cb0296f-4e6c-4470-81de-8d24aae51284
+Service principal key: Azure Key Vault
+
+Linked service: ls_ccams_kv
+Secret name: secret
+
+
+
+
+
+
+
+Step 4: Add Filter Activity Inside Until
+
+Drag "Filter" activity into the Until box
+Name: Filter_To_Find_Busy_Writers
+Connect: Ask_ADF_who_Is_Writing → Filter_To_Find_Busy_Writers
+Settings tab:
+
+Items: @activity('Ask_ADF_who_Is_Writing').output.value
+Condition: @or(equals(item().status, 'InProgress'), equals(item().status, 'Queued'))
+
+
+
+Step 5: Add Set Variable Activity Inside Until
+
+Drag "Set Variable" activity into the Until box
+Name: Update_Active_Runs_Count
+Connect: Filter_To_Find_Busy_Writers → Update_Active_Runs_Count
+Settings tab:
+
+Variable name: Select activeRuns from dropdown
+Value: @string(activity('Filter_To_Find_Busy_Writers').output.FilteredItemsCount)
+
+
+
+Step 6: Add If Condition Activity Inside Until
+
+Drag "If Condition" activity into the Until box
+Name: If_Writer_Still_Busy
+Connect: Update_Active_Runs_Count → If_Writer_Still_Busy
+Settings tab:
+
+Expression: @greater(int(variables('activeRuns')), 0)
+
+
+
+Step 7: Add Wait Activity in If TRUE Branch
+
+Click "Add activity" in TRUE branch of If Condition
+Drag "Wait" activity
+Name: Wait_For_A_Minute
+Settings tab:
+
+Wait time in seconds: 60
+
+
+
+Step 8: Add Execute Pipeline Activity Outside Until
+
+Drag "Execute Pipeline" activity outside the Until box
+Name: Execute_Common_Write_DB_Pipeline
+Connect: Until_Shared_Writer_Is_Free → Execute_Common_Write_DB_Pipeline
+Settings tab:
+
+Invoked pipeline: Select Common Write to DB Pipeline
+Wait on completion: ✅ Checked
+
+
+Parameters tab:
+
+alertsJsonInput: @pipeline().parameters.PatternAlertsJson
+surveillanceRunIDInput: @pipeline().parameters.PatternSurveillanceRunId
+datasetRunIdInput: @pipeline().parameters.PatternDatasetRunId
+alertTypeInput: @pipeline().parameters.PatternAlertType
+
+
+
+Step 9: Add Pipeline Parameters
+
+Click empty pipeline canvas
+Go to "Parameters" tab
+Add these 4 parameters:
+
+PatternAlertsJson (string)
+PatternSurveillanceRunId (string)
+PatternDatasetRunId (string)
+PatternAlertType (string)
+
+
+
+Step 10: Validate and Test
+
+Click "Validate"
+Fix any errors
+Click "Debug"
+Provide test parameters:
+
+{
+  "PatternAlertsJson": "[{\"SMBCAIDPrefix\": \"TEST\"}]",
+  "PatternSurveillanceRunId": "test-123",
+  "PatternDatasetRunId": "test-456",
+  "PatternAlertType": "Test Alert"
+}
+
+
+
+------------------------------------------------
 Updated#2 
 Yes, absolutely! You want to put the WebActivity inside an Until loop to keep checking until the pipeline is free. Here's exactly how to do it:
 Until Loop Configuration:
