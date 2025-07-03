@@ -1,3 +1,28 @@
+Updated#2 
+Yes, absolutely! You want to put the WebActivity inside an Until loop to keep checking until the pipeline is free. Here's exactly how to do it:
+Until Loop Configuration:
+Step 1: Create Until Activity
+
+Add Until activity to your pipeline
+Name it: Until_Shared_Writer_Is_Free
+
+Step 2: Configure Until Condition
+Expression: @equals(int(variables('activeRuns')), 0)
+Meaning: Keep looping until activeRuns = 0 (no busy pipelines)
+Step 3: Move Activities Inside Until Loop
+Drag these activities inside the Until activity:
+
+Ask_ADF_who_Is_Writing (WebActivity)
+Filter_To_Find_Busy_Writers
+Update_Active_Runs_Count
+If_Writer_Still_Busy (with Wait activity in TRUE branch)
+
+Step 4: Activities Outside Until Loop
+After Until completes, add:
+
+Send_To_Shared_Writing (Execute Pipeline)
+
+-----------------------------------------
 updated #1
 
 {
