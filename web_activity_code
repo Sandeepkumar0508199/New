@@ -156,20 +156,6 @@ datasetRunIdInput: @pipeline().parameters.PatternDatasetRunId
 alertTypeInput: @pipeline().parameters.PatternAlertType
 
 
-
-Step 9: Add Pipeline Parameters
-
-Click empty pipeline canvas
-Go to "Parameters" tab
-Add these 4 parameters:
-
-PatternAlertsJson (string)
-PatternSurveillanceRunId (string)
-PatternDatasetRunId (string)
-PatternAlertType (string)
-
-
-
 Step 10: Validate and Test
 
 Click "Validate"
