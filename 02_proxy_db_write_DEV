@@ -1,0 +1,72 @@
+{
+    "name": "proxy_db_write_DEV",
+    "properties": {
+        "activities": [
+            {
+                "name": "Simulate_Traffic_Control",
+                "type": "Wait",
+                "dependsOn": [],
+                "userProperties": [],
+                "typeProperties": {
+                    "waitTimeInSeconds": 2
+                }
+            },
+            {
+                "name": "Execute_Common_Write_DB_Pipeline_DEV",
+                "type": "ExecutePipeline",
+                "dependsOn": [
+                    {
+                        "activity": "Simulate_Traffic_Control",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "userProperties": [],
+                "typeProperties": {
+                    "pipeline": {
+                        "referenceName": "Common_Write_to_DB_Pipeline_DEV",
+                        "type": "PipelineReference"
+                    },
+                    "waitOnCompletion": true,
+                    "parameters": {
+                        "alertsJsonInput": {
+                            "value": "@pipeline().parameters.PatternAlertsJson",
+                            "type": "Expression"
+                        },
+                        "surveillanceRunIDInput": {
+                            "value": "@pipeline().parameters.PatternSurveillanceRunId",
+                            "type": "Expression"
+                        },
+                        "datasetRunIDInput": {
+                            "value": "@pipeline().parameters.PatternDatasetRunId",
+                            "type": "Expression"
+                        },
+                        "alertTypeInput": {
+                            "value": "@pipeline().parameters.PatternAlertType",
+                            "type": "Expression"
+                        }
+                    }
+                }
+            }
+        ],
+        "parameters": {
+            "PatternAlertsJson": {
+                "type": "String"
+            },
+            "PatternSurveillanceRunId": {
+                "type": "String"
+            },
+            "PatternDatasetRunId": {
+                "type": "String"
+            },
+            "PatternAlertType": {
+                "type": "String"
+            }
+        },
+        "folder": {
+            "name": "DEV_Testing"
+        },
+        "annotations": []
+    }
+}
