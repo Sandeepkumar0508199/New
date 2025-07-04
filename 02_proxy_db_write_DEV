@@ -168,3 +168,19 @@
         "annotations": []
     }
 }
+
+
+--------------
+Test Step 3 (proxy_db_write_DEV):
+
+Go to your proxy_db_write_DEV pipeline
+Click "Debug" or "Add trigger" → "Trigger now"
+Fill in these test parameters:
+
+PatternAlertsJson → "[{\"SMBCAIDPrefix\":\"TEST_001\",\"ProductSymbol\":\"USDJPY\",\"SMBCAlertType\":\"Cross Product Manipulation\",\"AccountID\":\"TEST_ACCOUNT\"}]"
+PatternSurveillanceRunId → "DEV-SURVID-789"
+PatternDatasetRunId → "DEV-DSRUNID-789"
+PatternAlertType → "Cross Product Manipulation"
+
+
+Click OK to run
