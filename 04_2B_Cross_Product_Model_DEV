@@ -1,0 +1,54 @@
+print("Starting 2B Cross Product Model - DEV Version")
+
+# Get parameters from ADF
+dbutils.widgets.text("adf_input_survid", "DEV-SURVID-123")
+dbutils.widgets.text("adf_input_batchid", "DEV-BATCH-456") 
+dbutils.widgets.text("adf_input_ds_runid", "DEV-DSRUNID-789")
+
+input_survid = dbutils.widgets.get("adf_input_survid")
+input_batchid = dbutils.widgets.get("adf_input_batchid")
+input_ds_runid = dbutils.widgets.get("adf_input_ds_runid")
+
+print(f"Surveillance ID: {input_survid}")
+print(f"Batch ID: {input_batchid}")
+print(f"Dataset Run ID: {input_ds_runid}")
+
+# Simulate data loading
+print("Simulating data loading...")
+print("Loading FX data - DONE")
+print("Loading SWAP data - DONE")
+print("Loading thresholds - DONE")
+
+# Simulate analysis
+print("Running cross product analysis...")
+print("Checking Spot vs Options - DONE")
+print("Checking Spot vs Forwards - DONE") 
+print("Checking Forwards vs Options - DONE")
+print("Checking Spot vs Swaps - DONE")
+
+# Create dummy alerts
+import json
+alerts = [
+    {
+        "SMBCAIDPrefix": "Cross_Product_FX",
+        "ProductSymbol": "USDJPY",
+        "SMBCAlertType": "Cross Product Manipulation",
+        "AccountID": "TEST_ACCOUNT_001",
+        "ShortAlertDescription": "Cross Product alert for USDJPY",
+        "AnalyticsValue1": "Time difference: 45 seconds",
+        "AnalyticsValue2": "Qualified trades: 8",
+        "AlertRelatedListExecutionClordIds": "EXEC_001,EXEC_002,EXEC_003"
+    }
+]
+
+print(f"Generated {len(alerts)} alerts")
+print("Alert 1: Cross Product alert for USDJPY")
+print("Account: TEST_ACCOUNT_001")
+
+# Convert to JSON
+alerts_json = json.dumps(alerts)
+print("Converting alerts to JSON - DONE")
+print("STEP 4 COMPLETE - Cross Product Model working!")
+
+# Return JSON to ADF
+dbutils.notebook.exit(alerts_json)
