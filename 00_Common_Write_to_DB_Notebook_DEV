@@ -1,0 +1,48 @@
+print("Starting Common Write Notebook - DEV Version")
+
+# Set up widgets to receive data from ADF
+dbutils.widgets.text("input_dataframe_json", "[]")
+dbutils.widgets.text("input_survid", "DEV-SURVID-123") 
+dbutils.widgets.text("input_ds_runid", "DEV-DSRUNID-456")
+dbutils.widgets.text("input_alert_type", "DEV Alert Type")
+
+# Get the values from widgets
+input_json = dbutils.widgets.get("input_dataframe_json")
+survid = dbutils.widgets.get("input_survid")
+ds_runid = dbutils.widgets.get("input_ds_runid")
+alert_type = dbutils.widgets.get("input_alert_type")
+
+print(f"Surveillance ID: {survid}")
+print(f"Dataset Run ID: {ds_runid}")
+print(f"Alert Type: {alert_type}")
+print(f"JSON length: {len(input_json)}")
+
+# If no JSON data, use dummy data for testing
+if not input_json or input_json.strip() in ['[]', '{}']:
+    print("No JSON data provided, using dummy test data")
+    dummy_data = '''[{
+        "SMBCAIDPrefix": "DEV_TEST_001",
+        "ProductSymbol": "USDJPY",
+        "SMBCAlertType": "Cross Product Manipulation",
+        "AccountID": "DEV_ACCOUNT_001",
+        "AlertRelatedListExecutionClordIds": "DEV_EXEC_001,DEV_EXEC_002"
+    }]'''
+    input_json = dummy_data
+
+# Parse the JSON
+import json
+try:
+    alerts_data = json.loads(input_json)
+    print(f"SUCCESS: Found {len(alerts_data)} alerts")
+    
+    # Show what we found
+    for i, alert in enumerate(alerts_data):
+        print(f"Alert {i+1}:")
+        print(f"  Type: {alert['SMBCAlertType']}")
+        print(f"  Account: {alert['AccountID']}")
+        print(f"  Symbol: {alert['ProductSymbol']}")
+    
+except Exception as e:
+    print(f"ERROR: {e}")
+
+print("STEP 1 COMPLETE - Notebook is working!")
