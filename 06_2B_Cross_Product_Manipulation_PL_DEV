@@ -1,0 +1,168 @@
+{
+    "name": "2B_Cross_Product_Manipulation_PL_DEV",
+    "properties": {
+        "activities": [
+            {
+                "name": "CrossProductManipulationNotebook_DEV",
+                "type": "DatabricksNotebook",
+                "dependsOn": [],
+                "policy": {
+                    "timeout": "0.12:00:00",
+                    "retry": 0,
+                    "retryIntervalInSeconds": 30,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "typeProperties": {
+                    "notebookPath": "/Shared/2B_Cross_Product_Model_DEV",
+                    "baseParameters": {
+                        "adf_input_survid": {
+                            "value": "@pipeline().parameters.testSurvId",
+                            "type": "Expression"
+                        },
+                        "adf_input_batchid": {
+                            "value": "@pipeline().parameters.testBatchId",
+                            "type": "Expression"
+                        },
+                        "adf_input_ds_runid": {
+                            "value": "@pipeline().parameters.testDsRunId",
+                            "type": "Expression"
+                        }
+                    }
+                },
+                "linkedServiceName": {
+                    "referenceName": "ls_ccams_databricks",
+                    "type": "LinkedServiceReference"
+                }
+            },
+            {
+                "name": "Execute_Customer_Cross_CM_DEV",
+                "type": "DatabricksNotebook",
+                "dependsOn": [],
+                "policy": {
+                    "timeout": "0.12:00:00",
+                    "retry": 0,
+                    "retryIntervalInSeconds": 30,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "typeProperties": {
+                    "notebookPath": "/Shared/Customer_Cross_CM_DEV",
+                    "baseParameters": {
+                        "adf_input_survid": {
+                            "value": "@pipeline().parameters.testSurvId",
+                            "type": "Expression"
+                        },
+                        "adf_input_batchid": {
+                            "value": "@pipeline().parameters.testBatchId",
+                            "type": "Expression"
+                        },
+                        "adf_input_ds_runid": {
+                            "value": "@pipeline().parameters.testDsRunId",
+                            "type": "Expression"
+                        }
+                    }
+                },
+                "linkedServiceName": {
+                    "referenceName": "ls_ccams_databricks",
+                    "type": "LinkedServiceReference"
+                }
+            },
+            {
+                "name": "Call_Proxy_DB_Write_For_Cross_Product",
+                "type": "ExecutePipeline",
+                "dependsOn": [
+                    {
+                        "activity": "CrossProductManipulationNotebook_DEV",
+                        "dependencyConditions": ["Succeeded"]
+                    }
+                ],
+                "policy": {
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "typeProperties": {
+                    "pipeline": {
+                        "referenceName": "proxy_db_write_DEV",
+                        "type": "PipelineReference"
+                    },
+                    "waitOnCompletion": true,
+                    "parameters": {
+                        "PatternAlertsJson": {
+                            "value": "@activity('CrossProductManipulationNotebook_DEV').output.runOutput",
+                            "type": "Expression"
+                        },
+                        "PatternSurveillanceRunId": {
+                            "value": "@pipeline().parameters.testSurvId",
+                            "type": "Expression"
+                        },
+                        "PatternDatasetRunId": {
+                            "value": "@pipeline().parameters.testDsRunId",
+                            "type": "Expression"
+                        },
+                        "PatternAlertType": {
+                            "value": "Cross Product Manipulation",
+                            "type": "Expression"
+                        }
+                    }
+                }
+            },
+            {
+                "name": "Call_Proxy_DB_Write_For_Customer_Cross",
+                "type": "ExecutePipeline",
+                "dependsOn": [
+                    {
+                        "activity": "Execute_Customer_Cross_CM_DEV",
+                        "dependencyConditions": ["Succeeded"]
+                    }
+                ],
+                "policy": {
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "typeProperties": {
+                    "pipeline": {
+                        "referenceName": "proxy_db_write_DEV",
+                        "type": "PipelineReference"
+                    },
+                    "waitOnCompletion": true,
+                    "parameters": {
+                        "PatternAlertsJson": {
+                            "value": "@activity('Execute_Customer_Cross_CM_DEV').output.runOutput",
+                            "type": "Expression"
+                        },
+                        "PatternSurveillanceRunId": {
+                            "value": "@pipeline().parameters.testSurvId",
+                            "type": "Expression"
+                        },
+                        "PatternDatasetRunId": {
+                            "value": "@pipeline().parameters.testDsRunId",
+                            "type": "Expression"
+                        },
+                        "PatternAlertType": {
+                            "value": "Customer Cross CM",
+                            "type": "Expression"
+                        }
+                    }
+                }
+            }
+        ],
+        "parameters": {
+            "testSurvId": {
+                "type": "String"
+            },
+            "testBatchId": {
+                "type": "String"
+            },
+            "testDsRunId": {
+                "type": "String"
+            }
+        },
+        "folder": {
+            "name": "DEV_Testing"
+        },
+        "annotations": []
+    }
+}
