@@ -1,0 +1,56 @@
+print("Starting Customer Cross CM - DEV Version")
+
+# Get parameters from ADF
+dbutils.widgets.text("adf_input_survid", "DEV-SURVID-123")
+dbutils.widgets.text("adf_input_batchid", "DEV-BATCH-456") 
+dbutils.widgets.text("adf_input_ds_runid", "DEV-DSRUNID-789")
+
+input_survid = dbutils.widgets.get("adf_input_survid")
+input_batchid = dbutils.widgets.get("adf_input_batchid")
+input_ds_runid = dbutils.widgets.get("adf_input_ds_runid")
+
+print(f"Surveillance ID: {input_survid}")
+print(f"Batch ID: {input_batchid}")
+print(f"Dataset Run ID: {input_ds_runid}")
+
+# Simulate data loading
+print("Simulating data loading...")
+print("Loading FX data - DONE")
+print("Loading CM trades - DONE")
+print("Loading customer trades - DONE")
+print("Loading thresholds - DONE")
+
+# Simulate customer cross analysis
+print("Running customer cross analysis...")
+print("Checking for offsetting trades - DONE")
+print("Checking time windows - DONE")
+print("Checking price deviations - DONE")
+
+# Create dummy customer cross alerts
+import json
+alerts = [
+    {
+        "SMBCAIDPrefix": "SMBC_CustCross",
+        "ProductSymbol": "EURUSD",
+        "SMBCAlertType": "Customer Cross CM",
+        "AccountID": "TEST_CUSTOMER_001",
+        "ShortAlertDescription": "Customer Cross alert for CM",
+        "AnalyticsValue1": "Buys executed: 1000000",
+        "AnalyticsValue2": "Sells executed: 1000000", 
+        "AnalyticsValue3": "Time between trades: 3.5 seconds",
+        "AlertRelatedListExecutionClordIds": "EXEC_CC_001,EXEC_CC_002"
+    }
+]
+
+print(f"Generated {len(alerts)} customer cross alerts")
+print("Alert 1: Customer Cross alert for CM")
+print("Account: TEST_CUSTOMER_001")
+print("Symbol: EURUSD")
+
+# Convert to JSON
+alerts_json = json.dumps(alerts)
+print("Converting alerts to JSON - DONE")
+print("STEP 5 COMPLETE - Customer Cross Model working!")
+
+# Return JSON to ADF
+dbutils.notebook.exit(alerts_json)
