@@ -3,25 +3,113 @@
     "properties": {
         "activities": [
             {
-                "name": "Simulate_Traffic_Control",
-                "type": "Wait",
+                "name": "Until_Shared_Writer_Is_Free_DEV",
+                "type": "Until",
                 "dependsOn": [],
                 "userProperties": [],
                 "typeProperties": {
-                    "waitTimeInSeconds": 2
-                }
+                    "expression": {
+                        "value": "@equals(int(variables('activeRuns')), 0)",
+                        "type": "Expression"
+                    },
+                    "activities": [
+                        {
+                            "name": "Simulate_Check_Who_Is_Writing",
+                            "type": "Wait",
+                            "dependsOn": [],
+                            "userProperties": [],
+                            "typeProperties": {
+                                "waitTimeInSeconds": 1
+                            }
+                        },
+                        {
+                            "name": "Simulate_Filter_Busy_Writers",
+                            "type": "SetVariable",
+                            "dependsOn": [
+                                {
+                                    "activity": "Simulate_Check_Who_Is_Writing",
+                                    "dependencyConditions": [
+                                        "Succeeded"
+                                    ]
+                                }
+                            ],
+                            "userProperties": [],
+                            "typeProperties": {
+                                "variableName": "simulatedBusyWriters",
+                                "value": {
+                                    "value": "0",
+                                    "type": "Expression"
+                                }
+                            }
+                        },
+                        {
+                            "name": "Update_Active_Runs_Count_DEV",
+                            "type": "SetVariable",
+                            "dependsOn": [
+                                {
+                                    "activity": "Simulate_Filter_Busy_Writers",
+                                    "dependencyConditions": [
+                                        "Succeeded"
+                                    ]
+                                }
+                            ],
+                            "userProperties": [],
+                            "typeProperties": {
+                                "variableName": "activeRuns",
+                                "value": {
+                                    "value": "@variables('simulatedBusyWriters')",
+                                    "type": "Expression"
+                                }
+                            }
+                        },
+                        {
+                            "name": "If_Writer_Still_Busy_DEV",
+                            "type": "IfCondition",
+                            "dependsOn": [
+                                {
+                                    "activity": "Update_Active_Runs_Count_DEV",
+                                    "dependencyConditions": [
+                                        "Succeeded"
+                                    ]
+                                }
+                            ],
+                            "userProperties": [],
+                            "typeProperties": {
+                                "expression": {
+                                    "value": "@greater(int(variables('activeRuns')), 0)",
+                                    "type": "Expression"
+                                },
+                                "ifTrueActivities": [
+                                    {
+                                        "name": "Wait_For_A_Minute_DEV",
+                                        "type": "Wait",
+                                        "dependsOn": [],
+                                        "userProperties": [],
+                                        "typeProperties": {
+                                            "waitTimeInSeconds": 3
+                                        }
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                },
+                "timeout": "7.00:00:00"
             },
             {
                 "name": "Execute_Common_Write_DB_Pipeline_DEV",
                 "type": "ExecutePipeline",
                 "dependsOn": [
                     {
-                        "activity": "Simulate_Traffic_Control",
+                        "activity": "Until_Shared_Writer_Is_Free_DEV",
                         "dependencyConditions": [
                             "Succeeded"
                         ]
                     }
                 ],
+                "policy": {
+                    "secureInput": false
+                },
                 "userProperties": [],
                 "typeProperties": {
                     "pipeline": {
@@ -62,6 +150,16 @@
             },
             "PatternAlertType": {
                 "type": "String"
+            }
+        },
+        "variables": {
+            "activeRuns": {
+                "type": "String",
+                "defaultValue": "1"
+            },
+            "simulatedBusyWriters": {
+                "type": "String",
+                "defaultValue": "0"
             }
         },
         "folder": {
