@@ -1,4 +1,4 @@
-print("Starting Customer Cross CM - DEV Version")
+print("Starting Customer Cross CM - DEV Version ")
 
 # Get parameters from ADF
 dbutils.widgets.text("adf_input_survid", "DEV-SURVID-123")
