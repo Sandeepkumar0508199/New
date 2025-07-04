@@ -166,3 +166,12 @@
         "annotations": []
     }
 }
+
+-----------------
+STEP 7: TEST THE COMPLETE END-TO-END FLOW
+Click "Debug" and fill in these test parameters:
+
+testSurvId → "DEV-FINAL-TEST-123"
+testBatchId → "DEV-BATCH-999"
+testDsRunId → "DEV-DSRUN-999"
+------------------------------------
