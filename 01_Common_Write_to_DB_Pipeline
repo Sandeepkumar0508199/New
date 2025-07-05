@@ -91,3 +91,10 @@
     ]
   }
 }
+
+
+--------
+[{"SMBCAIDPrefix":"PHASE2_TEST_001","ProductSymbol":"USDJPY","SMBCALertTime":"2025-01-04 20:30:00.000","SMBCLocalAlertTime":"2025-01-04 15:30:00.000","SMBCAlertType":"Cross Product Manipulation","IssuerName":"Test Bank Corp","ShortAlertDescription":"Phase 2 testing alert","TotalScore":"85","BusinessUnit":"Trading Desk","SMBCAlertGenerationDate":"2025-01-04 15:30:00.000","ProductName":"USD/JPY Spot","ProductID":"USDJPY_SPOT_001","AccountID":"PHASE2_ACCT_001","Exchange":"OTC","AssetClass":"FX","LongDescription":"This is a test alert for Phase 2 Common_Write_to_DB_Pipeline validation","AnalyticsValue1":"Time difference: 42.5 seconds","AnalyticsValue2":"Qualified trades: 8","AnalyticsValue3":"Derivative size: 2500000","ThresholdValue1":"Min quantity: 1000000","ThresholdValue2":"Lookback time: 300 seconds","ThresholdValue3":"Min trades: 5","AlertRelatedListExecutionClordIds":"PHASE2_EXEC001,PHASE2_EXEC002,PHASE2_EXEC003"}]
+PHASE2_SURV_12345
+PHASE2_DS_67890
+Cross Product Manipulation
