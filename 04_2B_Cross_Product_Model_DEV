@@ -13,42 +13,159 @@ print(f"Surveillance ID: {input_survid}")
 print(f"Batch ID: {input_batchid}")
 print(f"Dataset Run ID: {input_ds_runid}")
 
-# Simulate data loading
-print("Simulating data loading...")
-print("Loading FX data - DONE")
-print("Loading SWAP data - DONE")
-print("Loading thresholds - DONE")
+# DEV MODE: Simulate all data loading and processing
+print("DEV MODE: Simulating data loading...")
+print("Loading FX data from database - SIMULATED")
+print("Loading SWAP data from database - SIMULATED") 
+print("Loading threshold data - SIMULATED")
+print("Loading symbol codes - SIMULATED")
 
-# Simulate analysis
-print("Running cross product analysis...")
-print("Checking Spot vs Options - DONE")
-print("Checking Spot vs Forwards - DONE") 
-print("Checking Forwards vs Options - DONE")
-print("Checking Spot vs Swaps - DONE")
+# DEV MODE: Simulate threshold processing
+print("DEV MODE: Processing thresholds...")
+derivativeQuantityThreshold_spotOptions = 1000000
+lookbackTimeThreshold_spotOptions = 300
+underlyingQuantityThreshold_spotOptions = 500000
+minQualifiedTradesThreshold_spotOptions = 5
 
-# Create dummy alerts
+derivativeQuantityThreshold_spotForwards = 1000000
+lookbackTimeThreshold_spotForwards = 300
+underlyingQuantityThreshold_spotForwards = 500000
+minQualifiedTradesThreshold_spotForwards = 5
+
+derivativeQuantityThreshold_forwardsOptions = 1000000
+lookbackTimeThreshold_forwardsOptions = 300
+underlyingQuantityThreshold_forwardsOptions = 500000
+minQualifiedTradesThreshold_forwardsOptions = 5
+
+derivativeQuantityThreshold_spotSwap = 1000000
+lookbackTimeThreshold_spotSwap = 300
+underlyingQuantityThreshold_spotSwap = 500000
+minQualifiedTradesThreshold_spotSwap = 5
+
+print("DEV MODE: Threshold values loaded")
+
+# DEV MODE: Simulate cross product analysis
+print("DEV MODE: Running cross product analysis...")
+print("Analyzing Spot vs Options - SIMULATED")
+print("Analyzing Spot vs Forwards - SIMULATED")
+print("Analyzing Forwards vs Options - SIMULATED") 
+print("Analyzing Spot vs Swaps - SIMULATED")
+
+# DEV MODE: Create dummy alerts following the EXACT Gemini structure
+import pandas as pd
 import json
-alerts = [
-    {
-        "SMBCAIDPrefix": "Cross_Product_FX",
-        "ProductSymbol": "USDJPY",
-        "SMBCAlertType": "Cross Product Manipulation",
-        "AccountID": "TEST_ACCOUNT_001",
-        "ShortAlertDescription": "Cross Product alert for USDJPY",
-        "AnalyticsValue1": "Time difference: 45 seconds",
-        "AnalyticsValue2": "Qualified trades: 8",
-        "AlertRelatedListExecutionClordIds": "EXEC_001,EXEC_002,EXEC_003"
-    }
+import datetime
+
+# Create alerts DataFrame with ALL required columns (following Gemini structure)
+alertCols = [
+    "SMBCAIDPrefix", "ProductSymbol", "SMBCALertTime", "SMBCLocalAlertTime",
+    "SMBCAlertType", "IssuerName", "ShortAlertDescription", "TotalScore",
+    "BusinessUnit", "SMBCAlertGenerationDate", "ProductName", "ProductID",
+    "AccountID", "Exchange", "AssetClass", "LongDescription",
+    "AnalyticsValue1", "AnalyticsValue2", "AnalyticsValue3", "AnalyticsValue4", "AnalyticsValue5",
+    "AnalyticsValue6", "AnalyticsValue7", "AnalyticsValue8", "AnalyticsValue9", "AnalyticsValue10",
+    "AnalyticsValue11", "AnalyticsValue12", "AnalyticsValue13", "AnalyticsValue14", "AnalyticsValue15",
+    "AnalyticsValue16", "AnalyticsValue17", "AnalyticsValue18", "AnalyticsValue19", "AnalyticsValue20",
+    "ThresholdValue1", "ThresholdValue2", "ThresholdValue3", "ThresholdValue4", "ThresholdValue5",
+    "ThresholdValue6", "ThresholdValue7", "ThresholdValue8", "ThresholdValue9", "ThresholdValue10",
+    "ThresholdValue11", "ThresholdValue12", "ThresholdValue13", "ThresholdValue14", "ThresholdValue15",
+    "ThresholdValue16", "ThresholdValue17", "ThresholdValue18", "ThresholdValue19", "ThresholdValue20",
+    "ScoreComponent1", "ScoreComponent2", "ScoreComponent3", "ScoreComponent4", "ScoreComponent5",
+    "ScoreComponent6", "ScoreComponent7", "ScoreComponent8", "ScoreComponent9", "ScoreComponent10",
+    "ScoreComponent11", "ScoreComponent12", "ScoreComponent13", "ScoreComponent14", "ScoreComponent15",
+    "ScoreComponent16", "ScoreComponent17", "ScoreComponent18", "ScoreComponent19", "ScoreComponent20",
+    "AlertRelatedListOrderClordIds", "AlertRelatedListExecutionClordIds"
 ]
 
-print(f"Generated {len(alerts)} alerts")
-print("Alert 1: Cross Product alert for USDJPY")
-print("Account: TEST_ACCOUNT_001")
+# Create DataFrame with dummy alerts
+allAlerts_df = pd.DataFrame(columns=alertCols)
 
-# Convert to JSON
-alerts_json = json.dumps(alerts)
-print("Converting alerts to JSON - DONE")
-print("STEP 4 COMPLETE - Cross Product Model working!")
+# Add sample Cross Product alerts
+alert1_data = {
+    "SMBCAIDPrefix": "Cross_Product_Manipulation_FX",
+    "ProductSymbol": "Multiple Products",
+    "SMBCALertTime": "2025-01-15 10:30:00.000",
+    "SMBCLocalAlertTime": "2025-01-15 05:30:00.000",
+    "SMBCAlertType": "Cross Product Manipulation",
+    "IssuerName": "N/A",
+    "ShortAlertDescription": f"Cross Product SPOT vs Option Alert For TEST_ACCOUNT involving USDJPY",
+    "TotalScore": "0",
+    "BusinessUnit": "General",
+    "SMBCAlertGenerationDate": "2025-01-15 05:30:00.000",
+    "ProductName": "Multiple Products",
+    "ProductID": "Multiple Products",
+    "AccountID": "TEST_ACCOUNT_001",
+    "Exchange": "N/A",
+    "AssetClass": "FX",
+    "LongDescription": f"Cross Product SPOT vs Option For TEST_ACCOUNT involving USDJPY",
+    "AnalyticsValue1": f"Time Difference Between First Underlying and Derivative Timestamps: 45.50 seconds",
+    "AnalyticsValue2": f"Number of Qualified Underlying Trades: 8.00",
+    "AnalyticsValue3": f"Size of Derivative Trade: 1500000.00",
+    "ThresholdValue1": f"Derivative Quantity Threshold | {derivativeQuantityThreshold_spotOptions}.00",
+    "ThresholdValue2": f"Lookback Time Threshold | {lookbackTimeThreshold_spotOptions} seconds",
+    "ThresholdValue3": f"Underlying Quantity Threshold | {underlyingQuantityThreshold_spotOptions}.00",
+    "ThresholdValue4": f"Minimum Number of Qualified Trades Threshold | {minQualifiedTradesThreshold_spotOptions}.00",
+    "AlertRelatedListOrderClordIds": "N/A",
+    "AlertRelatedListExecutionClordIds": "EXEC_CP_001,EXEC_CP_002,EXEC_CP_003"
+}
 
-# Return JSON to ADF
-dbutils.notebook.exit(alerts_json)
+alert2_data = {
+    "SMBCAIDPrefix": "Cross_Product_Manipulation_FX",
+    "ProductSymbol": "Multiple Products",
+    "SMBCALertTime": "2025-01-15 10:35:00.000", 
+    "SMBCLocalAlertTime": "2025-01-15 05:35:00.000",
+    "SMBCAlertType": "Cross Product Manipulation",
+    "IssuerName": "N/A",
+    "ShortAlertDescription": f"Cross Product SPOT vs Forward Alert For TEST_ACCOUNT_002 involving EURUSD",
+    "TotalScore": "0",
+    "BusinessUnit": "General", 
+    "SMBCAlertGenerationDate": "2025-01-15 05:35:00.000",
+    "ProductName": "Multiple Products",
+    "ProductID": "Multiple Products",
+    "AccountID": "TEST_ACCOUNT_002",
+    "Exchange": "N/A",
+    "AssetClass": "FX",
+    "LongDescription": f"Cross Product SPOT vs Forward Alert For TEST_ACCOUNT_002 involving EURUSD",
+    "AnalyticsValue1": f"Time Difference Between First Underlying and Derivative Timestamps: 32.75 seconds",
+    "AnalyticsValue2": f"Number of Qualified Underlying Trades: 12.00",
+    "AnalyticsValue3": f"Size of Derivative Trade: 2500000.00",
+    "ThresholdValue1": f"Derivative Quantity Threshold | {derivativeQuantityThreshold_spotForwards}.00",
+    "ThresholdValue2": f"Lookback Time Threshold | {lookbackTimeThreshold_spotForwards} seconds",
+    "ThresholdValue3": f"Underlying Quantity Threshold | {underlyingQuantityThreshold_spotForwards}.00", 
+    "ThresholdValue4": f"Minimum Number of Qualified Trades Threshold | {minQualifiedTradesThreshold_spotForwards}.00",
+    "AlertRelatedListOrderClordIds": "N/A",
+    "AlertRelatedListExecutionClordIds": "EXEC_CP_004,EXEC_CP_005,EXEC_CP_006,EXEC_CP_007"
+}
+
+# Fill in None values for remaining columns
+for col in alertCols:
+    if col not in alert1_data:
+        alert1_data[col] = "N/A"
+    if col not in alert2_data:
+        alert2_data[col] = "N/A"
+
+# Add alerts to DataFrame
+allAlerts_df = pd.concat([allAlerts_df, pd.DataFrame([alert1_data])], ignore_index=True)
+allAlerts_df = pd.concat([allAlerts_df, pd.DataFrame([alert2_data])], ignore_index=True)
+
+# Fill any remaining NaN values
+allAlerts_df = allAlerts_df.fillna('N/A')
+
+print(f"DEV MODE: Generated {len(allAlerts_df)} Cross Product alerts")
+print("DEV MODE: Alert summary:")
+for i, alert in allAlerts_df.iterrows():
+    print(f"  Alert {i+1}: {alert['ShortAlertDescription']}")
+    print(f"    Account: {alert['AccountID']}")
+    print(f"    Analytics: {alert['AnalyticsValue2']}")
+
+# Convert final alerts to JSON for ADF (following Gemini structure)
+final_alerts_json_output = allAlerts_df.to_json(orient='records')
+print("DEV MODE: Converting alerts to JSON for ADF")
+print(f"DEV MODE: Generated JSON with {len(allAlerts_df)} alerts")
+print("DEV MODE: Sample JSON output:")
+print(final_alerts_json_output[:300] + "..." if len(final_alerts_json_output) > 300 else final_alerts_json_output)
+
+print("DEV MODE: 2B Cross Product Model completed successfully")
+
+# Hand over notes to ADF (exactly like Gemini says)
+dbutils.notebook.exit(final_alerts_json_output)
