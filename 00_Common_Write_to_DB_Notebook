@@ -1,25 +1,33 @@
 # Databricks Notebook: Common_Write_to_DB_Notebook
 # This notebook handles safe, sequential writing of alerts to the database.
-# It receives a DataFrame (alerts) as a JSON string and other metadata from ADF.
+# MODIFIED FOR DEV: Creates dummy data instead of actual database writes
 
 import pandas as pd
 from pyspark.sql.functions import col, lit, split, explode, regexp_replace
 from pyspark.sql.types import StructType, StructField, StringType
 import json
+import datetime
+import random
 
-# --- 1. Fetch Inputs from ADF ---
-# These are like notes from the messenger, telling us what alerts to write and where.
+# Fetch Inputs from ADF - These are the parameters passed from calling pipeline
 input_dataframe_json_str = dbutils.widgets.get("input_dataframe_json")
 input_survid = dbutils.widgets.get("input_survid")
 input_ds_runid = dbutils.widgets.get("input_ds_runid")
 input_alert_type = dbutils.widgets.get("input_alert_type")
 
-# --- 2. Reconstruct DataFrame from JSON string ---
-# The alerts arrive as a big text. We need to turn it back into a table (DataFrame).
+print("=== COMMON WRITE TO DB NOTEBOOK STARTED ===")
+print(f"Received Surveillance ID: {input_survid}")
+print(f"Received Dataset Run ID: {input_ds_runid}")
+print(f"Received Alert Type: {input_alert_type}")
+print(f"Received JSON Data Length: {len(input_dataframe_json_str)} characters")
+
+# Reconstruct DataFrame from JSON string
 try:
-    # If the input text is empty or just '[]', it means no alerts were found by the chef.
+    # Check if input is empty or just empty brackets
     if not input_dataframe_json_str or input_dataframe_json_str.strip() == '[]':
-        # Create an empty table with the correct column names, so the program doesn't crash.
+        print("INPUT: Empty DataFrame received - no alerts to process")
+        
+        # Create empty schema matching AlertDetail table structure
         alert_schema = StructType([
             StructField("SMBCAIDPrefix", StringType(), True),
             StructField("ProductSymbol", StringType(), True),
@@ -100,125 +108,171 @@ try:
             StructField("AlertRelatedListOrderClordIds", StringType(), True),
             StructField("AlertRelatedListExecutionClordIds", StringType(), True)
         ])
-        alerts_df_spark = spark.createDataFrame([], schema=alert_schema)
-        print("Received empty DataFrame for writing. No alerts to process.")
-    else:
-        # Turn the big text (JSON string) back into a table (Spark DataFrame).
-        alerts_df_spark = spark.read.json(sc.parallelize([input_dataframe_json_str]))
-        print(f"Received DataFrame with {alerts_df_spark.count()} rows for writing.")
-        alerts_df_spark.show(truncate=False)
         
-        # Make sure all columns in the table are text (StringType) to match the database.
-        for c in alerts_df_spark.columns:
-            alerts_df_spark = alerts_df_spark.withColumn(c, col(c).cast(StringType()))
+        alerts_df_spark = spark.createDataFrame([], schema=alert_schema)
+        print("RESULT: Created empty DataFrame with proper schema")
+        
+    else:
+        # Parse the JSON string and convert to DataFrame
+        print("INPUT: Converting JSON string to DataFrame")
+        alerts_df_spark = spark.read.json(sc.parallelize([input_dataframe_json_str]))
+        print(f"RESULT: Successfully created DataFrame with {alerts_df_spark.count()} rows")
+        
+        # Show the data structure
+        print("DATAFRAME SCHEMA:")
+        alerts_df_spark.printSchema()
+        
+        print("DATAFRAME CONTENT (first 5 rows):")
+        alerts_df_spark.show(5, truncate=False)
+        
+        # Convert all columns to string type to match database requirements
+        for column_name in alerts_df_spark.columns:
+            alerts_df_spark = alerts_df_spark.withColumn(column_name, col(column_name).cast(StringType()))
+        
+        print("RESULT: All columns converted to StringType")
 
 except Exception as e:
-    print(f"Error reconstructing DataFrame from JSON: {e}")
-    dbutils.notebook.exit(f"Failed to reconstruct DataFrame: {e}")
+    print(f"ERROR: Failed to reconstruct DataFrame from JSON: {e}")
+    dbutils.notebook.exit(f"FAILED: Cannot process input data: {e}")
 
-# --- Only proceed if the DataFrame (table) is not empty ---
+# Only proceed if DataFrame has data
 if not alerts_df_spark.isEmpty():
-    # --- 3. Database Connection Details ---
-    # These are the secret details to connect to our shared pantry (database).
+    print("=== PROCESSING ALERTS FOR DATABASE SIMULATION ===")
+    
+    # Simulate database connection details (not actually connecting)
     sql_server_tdr = 'sql-tdr-dev-use2'
     database_name_tdr = 'sqldb-tdr-dev-use2'
-    test_sp_name_tdr = dbutils.secrets.get("ccams-scope", "ccams-app-reg-id")
-    test_sp_pwd_tdr = dbutils.secrets.get("ccams-scope", "ccams-app-reg-sec")
+    print(f"SIMULATION: Would connect to {sql_server_tdr}/{database_name_tdr}")
     
-    sql_server_fqdn_tdr = f"jdbc:sqlserver://{sql_server_tdr}.database.windows.net:1433"
-    jdbc_parms_tdr = \
-    (
-    "encrypt=true;",
-    "trustServerCertificate=true;",
-    "hostNameInCertificate=*.database.windows.net;",
-    "loginTimeout=30;",
-    "driver=com.microsoft.sqlserver.jdbc.SQLServerDriver;",
-    "authentication=ActiveDirectoryServicePrincipal"
-    )
+    # Simulate database operations instead of actual writes
+    print("=== SIMULATION: AlertDetail Table Insert ===")
+    alert_count = alerts_df_spark.count()
+    print(f"SIMULATION: Would insert {alert_count} rows into ccams.AlertDetail table")
     
-    connection_string_tdr = f"jdbc:sqlserver://{sql_server_fqdn_tdr};database={database_name_tdr};user={test_sp_name_tdr};password={test_sp_pwd_tdr};{jdbc_parms_tdr}"
+    # Create dummy AlertID (simulate what database would generate)
+    base_alert_id = random.randint(10000, 99999)
+    print(f"SIMULATION: Generated dummy AlertID: {base_alert_id}")
     
-    # --- 4. Insert into AlertDetail Table ---
-    print("Inserting data into ccams.AlertDetail...")
-    try:
-        alerts_df_spark.write.format("jdbc").mode("append").option("url", connection_string_tdr).option("dbtable", "ccams.AlertDetail").save()
-        print("Successfully inserted into ccams.AlertDetail.")
-    except Exception as e:
-        print(f"Error inserting into AlertDetail: {e}")
-        dbutils.notebook.exit(f"Failed to write to AlertDetail: {e}")
+    # Simulate AlertLink table insert
+    print("=== SIMULATION: AlertLink Table Insert ===")
+    alertLink_data = {
+        'AlertID': [base_alert_id],
+        'SurveillanceRunId': [int(input_survid) if input_survid.isdigit() else 12345],
+        'DataRecordID': [int(input_ds_runid) if input_ds_runid.isdigit() else 67890]
+    }
     
-    # --- 5. Get the newly generated AlertID ---
-    print("Fetching MAX AlertID...")
-    try:
-        AlertID_df = (spark.read
-                     .format("jdbc")
-                     .option("url", connection_string_tdr)
-                     .option("query", f"SELECT MAX(AlertID) as AlertID FROM ccams.AlertDetail WHERE SMBCAlertType = '{input_alert_type}'")
-                     .load()
-                     )
-        AlertID = AlertID_df.toPandas()['AlertID'].iloc[0]
-        print(f"Fetched AlertID: {AlertID}")
-    except Exception as e:
-        print(f"Error fetching AlertID: {e}")
-        dbutils.notebook.exit(f"Failed to fetch AlertID: {e}")
+    alertLink_df = pd.DataFrame(alertLink_data)
+    print("SIMULATION: AlertLink data that would be inserted:")
+    print(alertLink_df)
     
-    # --- 6. Prepare and Insert into AlertLink Table ---
-    print("Preparing and inserting into ccams.AlertLink...")
-    try:
-        alertLink_data = {
-            'AlertID': [AlertID],
-            'SurveillanceRunId': [int(input_survid)],
-            'DataRecordID': [int(input_ds_runid)]
-        }
-        alertLink_df_spark = spark.createDataFrame(pd.DataFrame(alertLink_data))
-        alertLink_df_spark.write.format("jdbc").mode("append").option("url", connection_string_tdr).option("dbtable", "ccams.AlertLink").save()
-        print("Successfully inserted into ccams.AlertLink.")
-    except Exception as e:
-        print(f"Error inserting into AlertLink: {e}")
-        dbutils.notebook.exit(f"Failed to write to AlertLink: {e}")
+    # Simulate AlertTransactionLink table processing
+    print("=== SIMULATION: AlertTransactionLink Table Processing ===")
     
-    # --- 7. Prepare and Insert into AlertTransactionLink Table ---
-    print("Preparing and inserting into ccams.AlertTransactionLink...")
-    try:
-        if "AlertRelatedListExecutionClordIds" in alerts_df_spark.columns:
-            valid_alerts_df = alerts_df_spark.filter(
-                (col("AlertRelatedListExecutionClordIds").isNotNull()) &
-                (col("AlertRelatedListExecutionClordIds") != "")
+    # Check if execution ClOrdIDs column exists
+    execution_col = "AlertRelatedListExecutionClordIds"
+    if execution_col in alerts_df_spark.columns:
+        print(f"FOUND: {execution_col} column exists in DataFrame")
+        
+        # Filter for valid execution IDs
+        valid_alerts_df = alerts_df_spark.filter(
+            (col(execution_col).isNotNull()) & 
+            (col(execution_col) != "") &
+            (col(execution_col) != "N/A")
+        )
+        
+        valid_count = valid_alerts_df.count()
+        print(f"FOUND: {valid_count} alerts with valid execution ClOrdIDs")
+        
+        if valid_count > 0:
+            # Show sample of execution IDs
+            print("SAMPLE: Execution ClOrdIDs found:")
+            valid_alerts_df.select(execution_col).show(3, truncate=False)
+            
+            # Simulate the explosion and processing of ClOrdIDs
+            exploded_df = valid_alerts_df.withColumn(
+                "ClOrdIDs_Array",
+                split(regexp_replace(col(execution_col), "\\[|\\]", ""), ",")
             )
             
-            if not valid_alerts_df.isEmpty():
-                exploded_df = valid_alerts_df.withColumn(
-                    "ClOrdIDs_Array",
-                    split(regexp_replace(col("AlertRelatedListExecutionClordIds"), "\\[|\\]", ""), ",")
-                )
-                
-                alert_transaction_link_spark = exploded_df.select(
-                    lit(AlertID).alias("AlertID"),
-                    explode(col("ClOrdIDs_Array")).alias("ID")
-                ).withColumn("Type", lit("Execution"))
-                
-                alert_transaction_link_spark = alert_transaction_link_spark.withColumn(
-                    "ID",
-                    regexp_replace(col("ID"), "\\s+", "")
-                )
-                
-                alert_transaction_link_spark = alert_transaction_link_spark.filter(col("ID") != "")
-                
-                if not alert_transaction_link_spark.isEmpty():
-                    alert_transaction_link_spark.write.format("jdbc").mode("append").option("url", connection_string_tdr).option("dbtable", "ccams.AlertTransactionLink").save()
-                    print("Successfully inserted into ccams.AlertTransactionLink.")
-                else:
-                    print("No valid AlertRelatedListExecutionClordIds to insert into AlertTransactionLink.")
-            else:
-                print("No alerts with AlertRelatedListExecutionClordIds found for AlertTransactionLink.")
+            transaction_links_df = exploded_df.select(
+                lit(base_alert_id).alias("AlertID"),
+                explode(col("ClOrdIDs_Array")).alias("ID")
+            ).withColumn("Type", lit("Execution"))
+            
+            # Clean up whitespace
+            transaction_links_df = transaction_links_df.withColumn(
+                "ID", 
+                regexp_replace(col("ID"), "\\s+", "")
+            ).filter(col("ID") != "")
+            
+            transaction_link_count = transaction_links_df.count()
+            print(f"SIMULATION: Would insert {transaction_link_count} rows into ccams.AlertTransactionLink")
+            
+            if transaction_link_count > 0:
+                print("SAMPLE: Transaction links that would be created:")
+                transaction_links_df.show(5, truncate=False)
+            
         else:
-            print("Column 'AlertRelatedListExecutionClordIds' not found in DataFrame. Skipping AlertTransactionLink.")
-    except Exception as e:
-        print(f"Error inserting into AlertTransactionLink: {e}")
-        dbutils.notebook.exit(f"Failed to write to AlertTransactionLink: {e}")
+            print("RESULT: No valid execution ClOrdIDs found for transaction links")
+    else:
+        print(f"WARNING: Column {execution_col} not found in DataFrame")
+    
+    # Generate comprehensive output summary
+    print("=== FINAL SIMULATION SUMMARY ===")
+    print(f"Alert Type Processed: {input_alert_type}")
+    print(f"Surveillance Run ID: {input_survid}")
+    print(f"Dataset Run ID: {input_ds_runid}")
+    print(f"Total Alerts Processed: {alert_count}")
+    print(f"Simulated AlertID Generated: {base_alert_id}")
+    print(f"AlertDetail Records: {alert_count} (simulated)")
+    print(f"AlertLink Records: 1 (simulated)")
+    
+    if execution_col in alerts_df_spark.columns:
+        transaction_count = valid_alerts_df.count()
+        print(f"AlertTransactionLink Records: {transaction_count} (simulated)")
+    else:
+        print("AlertTransactionLink Records: 0 (no execution IDs)")
+    
+    # Create detailed processing log
+    processing_log = {
+        "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "pipeline_type": "Common_Write_to_DB_Notebook",
+        "alert_type": input_alert_type,
+        "surveillance_run_id": input_survid,
+        "dataset_run_id": input_ds_runid,
+        "alerts_processed": alert_count,
+        "simulated_alert_id": base_alert_id,
+        "status": "SUCCESS_SIMULATION"
+    }
+    
+    print("=== PROCESSING LOG ===")
+    for key, value in processing_log.items():
+        print(f"{key}: {value}")
 
 else:
-    print("No data in DataFrame to write to database. Skipping all write operations.")
+    print("=== NO DATA TO PROCESS ===")
+    print("INPUT: DataFrame is empty, skipping all database operations")
+    
+    # Still create a processing log for empty case
+    processing_log = {
+        "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "pipeline_type": "Common_Write_to_DB_Notebook",
+        "alert_type": input_alert_type,
+        "surveillance_run_id": input_survid,
+        "dataset_run_id": input_ds_runid,
+        "alerts_processed": 0,
+        "simulated_alert_id": "N/A",
+        "status": "SUCCESS_NO_DATA"
+    }
+    
+    print("=== PROCESSING LOG ===")
+    for key, value in processing_log.items():
+        print(f"{key}: {value}")
 
-print("Notebook execution finished: Data write process completed.")
-dbutils.notebook.exit("Success")
+# Simulate successful completion
+print("=== NOTEBOOK EXECUTION COMPLETED ===")
+print("STATUS: All database operations simulated successfully")
+print("NEXT: Pipeline will continue to next activity")
+
+# Exit with success message (this tells ADF the notebook completed successfully)
+dbutils.notebook.exit("SUCCESS: Database write simulation completed")
