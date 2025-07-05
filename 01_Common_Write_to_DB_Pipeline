@@ -1,98 +1,126 @@
 {
-  "name": "Common_Write_to_DB_Pipeline",
-  "properties": {
-    "description": "Shared Writing Station - Only ONE instance can run at a time to prevent database race conditions",
-    "activities": [
-      {
-        "name": "Execute_Common_Write_to_DB_Notebook",
-        "type": "DatabricksNotebook",
-        "dependsOn": [],
-        "policy": {
-          "timeout": "0.12:00:00",
-          "retry": 0,
-          "retryIntervalInSeconds": 30,
-          "secureOutput": false,
-          "secureInput": false
+    "name": "Common_Write_to_DB_Pipeline",
+    "properties": {
+        "description": "Shared Writing Station - Only ONE instance can run at a time to prevent database race conditions. This pipeline ensures sequential database writes while maintaining parallel processing capabilities.",
+        "activities": [
+            {
+                "name": "Execute_Common_Write_to_DB_Notebook",
+                "type": "DatabricksNotebook",
+                "dependsOn": [],
+                "policy": {
+                    "timeout": "0.12:00:00",
+                    "retry": 2,
+                    "retryIntervalInSeconds": 30,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "userProperties": [
+                    {
+                        "name": "NotebookPath",
+                        "value": "/Shared/Common_Write_to_DB_Notebook"
+                    },
+                    {
+                        "name": "Purpose", 
+                        "value": "Sequential Database Writer"
+                    }
+                ],
+                "typeProperties": {
+                    "notebookPath": "/Shared/Common_Write_to_DB_Notebook",
+                    "baseParameters": {
+                        "input_dataframe_json": {
+                            "value": "@pipeline().parameters.alertsJsonInput",
+                            "type": "Expression"
+                        },
+                        "input_survid": {
+                            "value": "@pipeline().parameters.surveillanceRunIDInput",
+                            "type": "Expression"
+                        },
+                        "input_ds_runid": {
+                            "value": "@pipeline().parameters.datasetRunIDInput",
+                            "type": "Expression"
+                        },
+                        "input_alert_type": {
+                            "value": "@pipeline().parameters.alertTypeInput",
+                            "type": "Expression"
+                        }
+                    },
+                    "linkedServiceName": {
+                        "referenceName": "ls_ccams_databricks",
+                        "type": "LinkedServiceReference",
+                        "parameters": {
+                            "subscription_id": {
+                                "value": "@pipeline().globalParameters.SubscriptionID",
+                                "type": "Expression"
+                            },
+                            "databricks_url": {
+                                "value": "@pipeline().globalParameters.ccamsDatabricksWS",
+                                "type": "Expression"
+                            },
+                            "workspace_resource_id": {
+                                "value": "@pipeline().globalParameters.ccamsDatabricksWSResourceID",
+                                "type": "Expression"
+                            },
+                            "cluster_id": {
+                                "value": "@pipeline().globalParameters.ClusterID",
+                                "type": "Expression"
+                            }
+                        }
+                    }
+                }
+            }
+        ],
+        "concurrency": 1,
+        "parameters": {
+            "alertsJsonInput": {
+                "type": "String",
+                "defaultValue": "[]"
+            },
+            "surveillanceRunIDInput": {
+                "type": "String",
+                "defaultValue": "DEFAULT_SURV_00000"
+            },
+            "datasetRunIDInput": {
+                "type": "String",
+                "defaultValue": "DEFAULT_DS_00000"
+            },
+            "alertTypeInput": {
+                "type": "String",
+                "defaultValue": "Default Alert Type"
+            }
         },
-        "userProperties": [],
-        "typeProperties": {
-          "notebookPath": "/Shared/Common_Write_to_DB_Notebook",
-          "baseParameters": {
-            "input_dataframe_json": {
-              "value": "@pipeline().parameters.alertsJsonInput",
-              "type": "Expression"
+        "variables": {
+            "varExecutionLog": {
+                "type": "String",
+                "defaultValue": ""
             },
-            "input_survid": {
-              "value": "@pipeline().parameters.surveillanceRunIdInput",
-              "type": "Expression"
-            },
-            "input_ds_runid": {
-              "value": "@pipeline().parameters.datasetRunIdInput",
-              "type": "Expression"
-            },
-            "input_alert_type": {
-              "value": "@pipeline().parameters.alertTypeInput",
-              "type": "Expression"
+            "varProcessingStatus": {
+                "type": "String", 
+                "defaultValue": "INITIALIZED"
             }
-          },
-          "linkedServiceName": {
-            "referenceName": "ls_ccams_databricks",
-            "type": "LinkedServiceReference",
-            "parameters": {
-              "subscription_id": {
-                "value": "@pipeline().globalParameters.SubscriptionID",
-                "type": "Expression"
-              },
-              "databricks_url": {
-                "value": "@pipeline().globalParameters.ccamsDatabricksWS",
-                "type": "Expression"
-              },
-              "workspace_resource_id": {
-                "value": "@pipeline().globalParameters.ccamsDatabricksWSResouceID",
-                "type": "Expression"
-              },
-              "cluster_id": {
-                "value": "@pipeline().globalParameters.ClusterID",
-                "type": "Expression"
-              }
-            }
-          }
-        }
-      }
-    ],
-    "concurrency": 1,
-    "parameters": {
-      "alertsJsonInput": {
-        "type": "String",
-        "defaultValue": ""
-      },
-      "surveillanceRunIdInput": {
-        "type": "String",
-        "defaultValue": ""
-      },
-      "datasetRunIdInput": {
-        "type": "String",
-        "defaultValue": ""
-      },
-      "alertTypeInput": {
-        "type": "String",
-        "defaultValue": ""
-      }
-    },
-    "variables": {},
-    "folder": {
-      "name": "SMBC_Database_Writers"
-    },
-    "annotations": [
-      "Sequential Database Writer",
-      "Concurrency Limited to 1",
-      "Race Condition Prevention",
-      "Shared Writing Station"
-    ]
-  }
+        },
+        "folder": {
+            "name": "SMBC_Database_Writers"
+        },
+        "annotations": [
+            "Sequential Database Writer",
+            "Concurrency Limited to 1", 
+            "Race Condition Prevention",
+            "Shared Writing Station",
+            "Database Simulation Mode",
+            "Interactive Runtime Compatible"
+        ]
+    }
 }
---------
-[{"SMBCAIDPrefix":"PHASE2_TEST_001","ProductSymbol":"USDJPY","SMBCALertTime":"2025-01-04 20:30:00.000","SMBCLocalAlertTime":"2025-01-04 15:30:00.000","SMBCAlertType":"Cross Product Manipulation","IssuerName":"Test Bank Corp","ShortAlertDescription":"Phase 2 testing alert","TotalScore":"85","BusinessUnit":"Trading Desk","SMBCAlertGenerationDate":"2025-01-04 15:30:00.000","ProductName":"USD/JPY Spot","ProductID":"USDJPY_SPOT_001","AccountID":"PHASE2_ACCT_001","Exchange":"OTC","AssetClass":"FX","LongDescription":"This is a test alert for Phase 2 Common_Write_to_DB_Pipeline validation","AnalyticsValue1":"Time difference: 42.5 seconds","AnalyticsValue2":"Qualified trades: 8","AnalyticsValue3":"Derivative size: 2500000","ThresholdValue1":"Min quantity: 1000000","ThresholdValue2":"Lookback time: 300 seconds","ThresholdValue3":"Min trades: 5","AlertRelatedListExecutionClordIds":"PHASE2_EXEC001,PHASE2_EXEC002,PHASE2_EXEC003"}]
-PHASE2_SURV_12345
-PHASE2_DS_67890
-Cross Product Manipulation
+
+-------------
+[{"SMBCAIDPrefix":"CUSTOMER_CROSS_TEST_001","ProductSymbol":"EURUSD","SMBCALertTime":"2025-01-04 23:30:00.000","SMBCLocalAlertTime":"2025-01-04 18:30:00.000","SMBCAlertType":"Customer Cross CM","IssuerName":"Customer Cross Test Bank","ShortAlertDescription":"Customer cross testing alert with full data validation","TotalScore":"87","BusinessUnit":"Customer Cross Trading Unit","SMBCAlertGenerationDate":"2025-01-04 18:30:00.000","ProductName":"EUR/USD Customer Cross Test","ProductID":"EURUSD_CUST_CROSS_001","AccountID":"CUSTOMER_CROSS_ACCT_001","Exchange":"CUSTOMER_CROSS_EXCHANGE","AssetClass":"FX Customer Products","LongDescription":"Customer cross alert designed for comprehensive testing of CM pipeline integration with database simulation capabilities","AnalyticsValue1":"Customer cross execution time differential: 18.7 seconds","AnalyticsValue2":"Cross trade volume processed: 6200000.00","AnalyticsValue3":"Price matching accuracy achieved: 99.97%","AnalyticsValue4":"Client risk profile rating: High","ThresholdValue1":"Minimum customer execution value: 2000000.00","ThresholdValue2":"Maximum allowable time window: 45 seconds","ThresholdValue3":"Price deviation tolerance level: 0.015%","AlertRelatedListExecutionClordIds":"CUST_CROSS_EXEC_001,CUST_CROSS_EXEC_002,CUST_CROSS_EXEC_003"}]
+CUSTOMER_CROSS_SURV_77777
+CUSTOMER_CROSS_DS_66666
+Customer Cross CM
+
+2)
+[{"SMBCAIDPrefix":"MULTI_TEST_001","ProductSymbol":"GBPJPY","SMBCALertTime":"2025-01-04 23:45:00.000","SMBCLocalAlertTime":"2025-01-04 18:45:00.000","SMBCAlertType":"Cross Product Manipulation","IssuerName":"Multi Test Bank A","ShortAlertDescription":"First alert in multiple alert test","TotalScore":"82","BusinessUnit":"Multi Test Unit A","SMBCAlertGenerationDate":"2025-01-04 18:45:00.000","ProductName":"GBP/JPY Multi Test A","ProductID":"GBPJPY_MULTI_A_001","AccountID":"MULTI_TEST_ACCT_A_001","Exchange":"MULTI_TEST_A","AssetClass":"FX","AlertRelatedListExecutionClordIds":"MULTI_A_EXEC_001,MULTI_A_EXEC_002"},{"SMBCAIDPrefix":"MULTI_TEST_002","ProductSymbol":"AUDCAD","SMBCALertTime":"2025-01-04 23:46:00.000","SMBCLocalAlertTime":"2025-01-04 18:46:00.000","SMBCAlertType":"Customer Cross CM","IssuerName":"Multi Test Bank B","ShortAlertDescription":"Second alert in multiple alert test","TotalScore":"89","BusinessUnit":"Multi Test Unit B","SMBCAlertGenerationDate":"2025-01-04 18:46:00.000","ProductName":"AUD/CAD Multi Test B","ProductID":"AUDCAD_MULTI_B_001","AccountID":"MULTI_TEST_ACCT_B_001","Exchange":"MULTI_TEST_B","AssetClass":"FX","AlertRelatedListExecutionClordIds":"MULTI_B_EXEC_001,MULTI_B_EXEC_002,MULTI_B_EXEC_003"}]
+MULTI_TEST_SURV_55555
+MULTI_TEST_DS_44444
+Multiple Alert Test
+
