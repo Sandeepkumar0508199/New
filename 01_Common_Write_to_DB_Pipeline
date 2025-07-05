@@ -57,7 +57,7 @@
                                 "type": "Expression"
                             },
                             "workspace_resource_id": {
-                                "value": "@pipeline().globalParameters.ccamsDatabricksWSResourceID",
+                                "value": "@pipeline().globalParameters.ccamsDatabricksWSResouceID",
                                 "type": "Expression"
                             },
                             "cluster_id": {
@@ -111,7 +111,6 @@
         ]
     }
 }
-
 -------------
 [{"SMBCAIDPrefix":"CUSTOMER_CROSS_TEST_001","ProductSymbol":"EURUSD","SMBCALertTime":"2025-01-04 23:30:00.000","SMBCLocalAlertTime":"2025-01-04 18:30:00.000","SMBCAlertType":"Customer Cross CM","IssuerName":"Customer Cross Test Bank","ShortAlertDescription":"Customer cross testing alert with full data validation","TotalScore":"87","BusinessUnit":"Customer Cross Trading Unit","SMBCAlertGenerationDate":"2025-01-04 18:30:00.000","ProductName":"EUR/USD Customer Cross Test","ProductID":"EURUSD_CUST_CROSS_001","AccountID":"CUSTOMER_CROSS_ACCT_001","Exchange":"CUSTOMER_CROSS_EXCHANGE","AssetClass":"FX Customer Products","LongDescription":"Customer cross alert designed for comprehensive testing of CM pipeline integration with database simulation capabilities","AnalyticsValue1":"Customer cross execution time differential: 18.7 seconds","AnalyticsValue2":"Cross trade volume processed: 6200000.00","AnalyticsValue3":"Price matching accuracy achieved: 99.97%","AnalyticsValue4":"Client risk profile rating: High","ThresholdValue1":"Minimum customer execution value: 2000000.00","ThresholdValue2":"Maximum allowable time window: 45 seconds","ThresholdValue3":"Price deviation tolerance level: 0.015%","AlertRelatedListExecutionClordIds":"CUST_CROSS_EXEC_001,CUST_CROSS_EXEC_002,CUST_CROSS_EXEC_003"}]
 CUSTOMER_CROSS_SURV_77777
