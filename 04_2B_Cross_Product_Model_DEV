@@ -27,21 +27,6 @@ lookbackTimeThreshold_spotOptions = 300
 underlyingQuantityThreshold_spotOptions = 500000
 minQualifiedTradesThreshold_spotOptions = 5
 
-derivativeQuantityThreshold_spotForwards = 1000000
-lookbackTimeThreshold_spotForwards = 300
-underlyingQuantityThreshold_spotForwards = 500000
-minQualifiedTradesThreshold_spotForwards = 5
-
-derivativeQuantityThreshold_forwardsOptions = 1000000
-lookbackTimeThreshold_forwardsOptions = 300
-underlyingQuantityThreshold_forwardsOptions = 500000
-minQualifiedTradesThreshold_forwardsOptions = 5
-
-derivativeQuantityThreshold_spotSwap = 1000000
-lookbackTimeThreshold_spotSwap = 300
-underlyingQuantityThreshold_spotSwap = 500000
-minQualifiedTradesThreshold_spotSwap = 5
-
 print("DEV MODE: Threshold values loaded")
 
 # DEV MODE: Simulate cross product analysis
@@ -54,102 +39,67 @@ print("Analyzing Spot vs Swaps - SIMULATED")
 # DEV MODE: Create dummy alerts following the EXACT Gemini structure
 import pandas as pd
 import json
-import datetime
 
-# Create alerts DataFrame with ALL required columns (following Gemini structure)
-alertCols = [
-    "SMBCAIDPrefix", "ProductSymbol", "SMBCALertTime", "SMBCLocalAlertTime",
-    "SMBCAlertType", "IssuerName", "ShortAlertDescription", "TotalScore",
-    "BusinessUnit", "SMBCAlertGenerationDate", "ProductName", "ProductID",
-    "AccountID", "Exchange", "AssetClass", "LongDescription",
-    "AnalyticsValue1", "AnalyticsValue2", "AnalyticsValue3", "AnalyticsValue4", "AnalyticsValue5",
-    "AnalyticsValue6", "AnalyticsValue7", "AnalyticsValue8", "AnalyticsValue9", "AnalyticsValue10",
-    "AnalyticsValue11", "AnalyticsValue12", "AnalyticsValue13", "AnalyticsValue14", "AnalyticsValue15",
-    "AnalyticsValue16", "AnalyticsValue17", "AnalyticsValue18", "AnalyticsValue19", "AnalyticsValue20",
-    "ThresholdValue1", "ThresholdValue2", "ThresholdValue3", "ThresholdValue4", "ThresholdValue5",
-    "ThresholdValue6", "ThresholdValue7", "ThresholdValue8", "ThresholdValue9", "ThresholdValue10",
-    "ThresholdValue11", "ThresholdValue12", "ThresholdValue13", "ThresholdValue14", "ThresholdValue15",
-    "ThresholdValue16", "ThresholdValue17", "ThresholdValue18", "ThresholdValue19", "ThresholdValue20",
-    "ScoreComponent1", "ScoreComponent2", "ScoreComponent3", "ScoreComponent4", "ScoreComponent5",
-    "ScoreComponent6", "ScoreComponent7", "ScoreComponent8", "ScoreComponent9", "ScoreComponent10",
-    "ScoreComponent11", "ScoreComponent12", "ScoreComponent13", "ScoreComponent14", "ScoreComponent15",
-    "ScoreComponent16", "ScoreComponent17", "ScoreComponent18", "ScoreComponent19", "ScoreComponent20",
-    "AlertRelatedListOrderClordIds", "AlertRelatedListExecutionClordIds"
+# Create sample Cross Product alerts
+alerts_data = [
+    {
+        "SMBCAIDPrefix": "Cross_Product_Manipulation_FX",
+        "ProductSymbol": "Multiple Products",
+        "SMBCALertTime": "2025-01-15 10:30:00.000",
+        "SMBCLocalAlertTime": "2025-01-15 05:30:00.000",
+        "SMBCAlertType": "Cross Product Manipulation",
+        "IssuerName": "N/A",
+        "ShortAlertDescription": "Cross Product SPOT vs Option Alert For TEST_ACCOUNT involving USDJPY",
+        "TotalScore": "0",
+        "BusinessUnit": "General",
+        "SMBCAlertGenerationDate": "2025-01-15 05:30:00.000",
+        "ProductName": "Multiple Products",
+        "ProductID": "Multiple Products",
+        "AccountID": "TEST_ACCOUNT_001",
+        "Exchange": "N/A",
+        "AssetClass": "FX",
+        "LongDescription": "Cross Product SPOT vs Option For TEST_ACCOUNT involving USDJPY",
+        "AnalyticsValue1": "Time Difference Between First Underlying and Derivative Timestamps: 45.50 seconds",
+        "AnalyticsValue2": "Number of Qualified Underlying Trades: 8.00",
+        "AnalyticsValue3": "Size of Derivative Trade: 1500000.00",
+        "ThresholdValue1": "Derivative Quantity Threshold | 1000000.00",
+        "ThresholdValue2": "Lookback Time Threshold | 300 seconds",
+        "ThresholdValue3": "Underlying Quantity Threshold | 500000.00",
+        "ThresholdValue4": "Minimum Number of Qualified Trades Threshold | 5.00",
+        "AlertRelatedListOrderClordIds": "N/A",
+        "AlertRelatedListExecutionClordIds": "EXEC_CP_001,EXEC_CP_002,EXEC_CP_003"
+    },
+    {
+        "SMBCAIDPrefix": "Cross_Product_Manipulation_FX",
+        "ProductSymbol": "Multiple Products",
+        "SMBCALertTime": "2025-01-15 10:35:00.000", 
+        "SMBCLocalAlertTime": "2025-01-15 05:35:00.000",
+        "SMBCAlertType": "Cross Product Manipulation",
+        "IssuerName": "N/A",
+        "ShortAlertDescription": "Cross Product SPOT vs Forward Alert For TEST_ACCOUNT_002 involving EURUSD",
+        "TotalScore": "0",
+        "BusinessUnit": "General", 
+        "SMBCAlertGenerationDate": "2025-01-15 05:35:00.000",
+        "ProductName": "Multiple Products",
+        "ProductID": "Multiple Products",
+        "AccountID": "TEST_ACCOUNT_002",
+        "Exchange": "N/A",
+        "AssetClass": "FX",
+        "LongDescription": "Cross Product SPOT vs Forward Alert For TEST_ACCOUNT_002 involving EURUSD",
+        "AnalyticsValue1": "Time Difference Between First Underlying and Derivative Timestamps: 32.75 seconds",
+        "AnalyticsValue2": "Number of Qualified Underlying Trades: 12.00",
+        "AnalyticsValue3": "Size of Derivative Trade: 2500000.00",
+        "ThresholdValue1": "Derivative Quantity Threshold | 1000000.00",
+        "ThresholdValue2": "Lookback Time Threshold | 300 seconds",
+        "ThresholdValue3": "Underlying Quantity Threshold | 500000.00", 
+        "ThresholdValue4": "Minimum Number of Qualified Trades Threshold | 5.00",
+        "AlertRelatedListOrderClordIds": "N/A",
+        "AlertRelatedListExecutionClordIds": "EXEC_CP_004,EXEC_CP_005,EXEC_CP_006,EXEC_CP_007"
+    }
 ]
 
-# Create DataFrame with dummy alerts
-allAlerts_df = pd.DataFrame(columns=alertCols)
-
-# Add sample Cross Product alerts
-alert1_data = {
-    "SMBCAIDPrefix": "Cross_Product_Manipulation_FX",
-    "ProductSymbol": "Multiple Products",
-    "SMBCALertTime": "2025-01-15 10:30:00.000",
-    "SMBCLocalAlertTime": "2025-01-15 05:30:00.000",
-    "SMBCAlertType": "Cross Product Manipulation",
-    "IssuerName": "N/A",
-    "ShortAlertDescription": f"Cross Product SPOT vs Option Alert For TEST_ACCOUNT involving USDJPY",
-    "TotalScore": "0",
-    "BusinessUnit": "General",
-    "SMBCAlertGenerationDate": "2025-01-15 05:30:00.000",
-    "ProductName": "Multiple Products",
-    "ProductID": "Multiple Products",
-    "AccountID": "TEST_ACCOUNT_001",
-    "Exchange": "N/A",
-    "AssetClass": "FX",
-    "LongDescription": f"Cross Product SPOT vs Option For TEST_ACCOUNT involving USDJPY",
-    "AnalyticsValue1": f"Time Difference Between First Underlying and Derivative Timestamps: 45.50 seconds",
-    "AnalyticsValue2": f"Number of Qualified Underlying Trades: 8.00",
-    "AnalyticsValue3": f"Size of Derivative Trade: 1500000.00",
-    "ThresholdValue1": f"Derivative Quantity Threshold | {derivativeQuantityThreshold_spotOptions}.00",
-    "ThresholdValue2": f"Lookback Time Threshold | {lookbackTimeThreshold_spotOptions} seconds",
-    "ThresholdValue3": f"Underlying Quantity Threshold | {underlyingQuantityThreshold_spotOptions}.00",
-    "ThresholdValue4": f"Minimum Number of Qualified Trades Threshold | {minQualifiedTradesThreshold_spotOptions}.00",
-    "AlertRelatedListOrderClordIds": "N/A",
-    "AlertRelatedListExecutionClordIds": "EXEC_CP_001,EXEC_CP_002,EXEC_CP_003"
-}
-
-alert2_data = {
-    "SMBCAIDPrefix": "Cross_Product_Manipulation_FX",
-    "ProductSymbol": "Multiple Products",
-    "SMBCALertTime": "2025-01-15 10:35:00.000", 
-    "SMBCLocalAlertTime": "2025-01-15 05:35:00.000",
-    "SMBCAlertType": "Cross Product Manipulation",
-    "IssuerName": "N/A",
-    "ShortAlertDescription": f"Cross Product SPOT vs Forward Alert For TEST_ACCOUNT_002 involving EURUSD",
-    "TotalScore": "0",
-    "BusinessUnit": "General", 
-    "SMBCAlertGenerationDate": "2025-01-15 05:35:00.000",
-    "ProductName": "Multiple Products",
-    "ProductID": "Multiple Products",
-    "AccountID": "TEST_ACCOUNT_002",
-    "Exchange": "N/A",
-    "AssetClass": "FX",
-    "LongDescription": f"Cross Product SPOT vs Forward Alert For TEST_ACCOUNT_002 involving EURUSD",
-    "AnalyticsValue1": f"Time Difference Between First Underlying and Derivative Timestamps: 32.75 seconds",
-    "AnalyticsValue2": f"Number of Qualified Underlying Trades: 12.00",
-    "AnalyticsValue3": f"Size of Derivative Trade: 2500000.00",
-    "ThresholdValue1": f"Derivative Quantity Threshold | {derivativeQuantityThreshold_spotForwards}.00",
-    "ThresholdValue2": f"Lookback Time Threshold | {lookbackTimeThreshold_spotForwards} seconds",
-    "ThresholdValue3": f"Underlying Quantity Threshold | {underlyingQuantityThreshold_spotForwards}.00", 
-    "ThresholdValue4": f"Minimum Number of Qualified Trades Threshold | {minQualifiedTradesThreshold_spotForwards}.00",
-    "AlertRelatedListOrderClordIds": "N/A",
-    "AlertRelatedListExecutionClordIds": "EXEC_CP_004,EXEC_CP_005,EXEC_CP_006,EXEC_CP_007"
-}
-
-# Fill in None values for remaining columns
-for col in alertCols:
-    if col not in alert1_data:
-        alert1_data[col] = "N/A"
-    if col not in alert2_data:
-        alert2_data[col] = "N/A"
-
-# Add alerts to DataFrame
-allAlerts_df = pd.concat([allAlerts_df, pd.DataFrame([alert1_data])], ignore_index=True)
-allAlerts_df = pd.concat([allAlerts_df, pd.DataFrame([alert2_data])], ignore_index=True)
-
-# Fill any remaining NaN values
-allAlerts_df = allAlerts_df.fillna('N/A')
+# Create DataFrame from alerts data
+allAlerts_df = pd.DataFrame(alerts_data)
 
 print(f"DEV MODE: Generated {len(allAlerts_df)} Cross Product alerts")
 print("DEV MODE: Alert summary:")
