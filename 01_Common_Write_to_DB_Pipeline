@@ -1,0 +1,92 @@
+{
+  "name": "Common_Write_to_DB_Pipeline",
+  "properties": {
+    "description": "Shared Writing Station - Only ONE instance can run at a time to prevent race conditions",
+    "activities": [
+      {
+        "name": "Execute_Common_Write_to_DB_Notebook",
+        "type": "DatabricksNotebook",
+        "dependsOn": [],
+        "policy": {
+          "timeout": "0.12:00:00",
+          "retry": 0,
+          "retryIntervalInSeconds": 30,
+          "secureOutput": false,
+          "secureInput": false
+        },
+        "userProperties": [],
+        "typeProperties": {
+          "notebookPath": "/Shared/Common_Write_to_DB_Notebook",
+          "baseParameters": {
+            "input_dataframe_json": {
+              "value": "@pipeline().parameters.alertsJsonInput",
+              "type": "Expression"
+            },
+            "input_survid": {
+              "value": "@pipeline().parameters.surveillanceRunIdInput",
+              "type": "Expression"
+            },
+            "input_ds_runid": {
+              "value": "@pipeline().parameters.datasetRunIdInput",
+              "type": "Expression"
+            },
+            "input_alert_type": {
+              "value": "@pipeline().parameters.alertTypeInput",
+              "type": "Expression"
+            }
+          },
+          "linkedServiceName": {
+            "referenceName": "ls_ccams_databricks",
+            "type": "LinkedServiceReference",
+            "parameters": {
+              "subscription_id": {
+                "value": "@pipeline().globalParameters.SubscriptionID",
+                "type": "Expression"
+              },
+              "databricks_url": {
+                "value": "@pipeline().globalParameters.ccamsDatabricksWS",
+                "type": "Expression"
+              },
+              "workspace_resource_id": {
+                "value": "@pipeline().globalParameters.ccamsDatabricksWSResourceID",
+                "type": "Expression"
+              },
+              "cluster_id": {
+                "value": "@pipeline().globalParameters.ClusterID",
+                "type": "Expression"
+              }
+            }
+          }
+        }
+      }
+    ],
+    "concurrency": 1,
+    "parameters": {
+      "alertsJsonInput": {
+        "type": "String",
+        "defaultValue": ""
+      },
+      "surveillanceRunIdInput": {
+        "type": "String",
+        "defaultValue": ""
+      },
+      "datasetRunIdInput": {
+        "type": "String", 
+        "defaultValue": ""
+      },
+      "alertTypeInput": {
+        "type": "String",
+        "defaultValue": ""
+      }
+    },
+    "variables": {},
+    "folder": {
+      "name": "SMBC_Database_Writers"
+    },
+    "annotations": [
+      "Sequential Database Writer",
+      "Concurrency Limited to 1",
+      "Race Condition Prevention"
+    ]
+  }
+}
