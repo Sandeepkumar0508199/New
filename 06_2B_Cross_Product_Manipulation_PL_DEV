@@ -3,160 +3,512 @@
     "properties": {
         "activities": [
             {
-                "name": "CrossProductManipulationNotebook_DEV",
-                "type": "DatabricksNotebook",
-                "dependsOn": [],
+                "name": "variableCOB",
+                "type": "SetVariable",
+                "dependsOn": [
+                    {
+                        "activity": "GetRunID_DEV",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
                 "policy": {
-                    "timeout": "0.12:00:00",
-                    "retry": 0,
-                    "retryIntervalInSeconds": 30,
                     "secureOutput": false,
                     "secureInput": false
                 },
                 "userProperties": [],
                 "typeProperties": {
-                    "notebookPath": "/Shared/2B_Cross_Product_Model_DEV",
-                    "baseParameters": {
-                        "adf_input_survid": {
-                            "value": "@pipeline().parameters.testSurvId",
-                            "type": "Expression"
-                        },
-                        "adf_input_batchid": {
-                            "value": "@pipeline().parameters.testBatchId",
-                            "type": "Expression"
-                        },
-                        "adf_input_ds_runid": {
-                            "value": "@pipeline().parameters.testDsRunId",
-                            "type": "Expression"
-                        }
+                    "variableName": "varCOB",
+                    "value": {
+                        "value": "DEV-BATCH-123",
+                        "type": "Expression"
                     }
-                },
-                "linkedServiceName": {
-                    "referenceName": "ls_ccams_databricks",
-                    "type": "LinkedServiceReference"
                 }
             },
             {
-                "name": "Execute_Customer_Cross_CM_DEV",
-                "type": "DatabricksNotebook",
-                "dependsOn": [],
+                "name": "runid",
+                "type": "SetVariable",
+                "dependsOn": [
+                    {
+                        "activity": "GetRunID_DEV",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
                 "policy": {
-                    "timeout": "0.12:00:00",
-                    "retry": 0,
-                    "retryIntervalInSeconds": 30,
                     "secureOutput": false,
                     "secureInput": false
                 },
                 "userProperties": [],
                 "typeProperties": {
-                    "notebookPath": "/Shared/Customer_Cross_CM_DEV",
-                    "baseParameters": {
-                        "adf_input_survid": {
-                            "value": "@pipeline().parameters.testSurvId",
-                            "type": "Expression"
-                        },
-                        "adf_input_batchid": {
-                            "value": "@pipeline().parameters.testBatchId",
-                            "type": "Expression"
-                        },
-                        "adf_input_ds_runid": {
-                            "value": "@pipeline().parameters.testDsRunId",
-                            "type": "Expression"
-                        }
-                    }
-                },
-                "linkedServiceName": {
-                    "referenceName": "ls_ccams_databricks",
-                    "type": "LinkedServiceReference"
-                }
-            },
-            {
-                "name": "Call_Proxy_DB_Write_For_Cross_Product",
-                "type": "ExecutePipeline",
-                "dependsOn": [
-                    {
-                        "activity": "CrossProductManipulationNotebook_DEV",
-                        "dependencyConditions": ["Succeeded"]
-                    }
-                ],
-                "policy": {
-                    "secureInput": false
-                },
-                "userProperties": [],
-                "typeProperties": {
-                    "pipeline": {
-                        "referenceName": "proxy_db_write_DEV",
-                        "type": "PipelineReference"
-                    },
-                    "waitOnCompletion": true,
-                    "parameters": {
-                        "PatternAlertsJson": {
-                            "value": "@activity('CrossProductManipulationNotebook_DEV').output.runOutput",
-                            "type": "Expression"
-                        },
-                        "PatternSurveillanceRunId": {
-                            "value": "@pipeline().parameters.testSurvId",
-                            "type": "Expression"
-                        },
-                        "PatternDatasetRunId": {
-                            "value": "@pipeline().parameters.testDsRunId",
-                            "type": "Expression"
-                        },
-                        "PatternAlertType": {
-                            "value": "Cross Product Manipulation",
-                            "type": "Expression"
-                        }
+                    "variableName": "varrunid",
+                    "value": {
+                        "value": "DEV-RUNID-456",
+                        "type": "Expression"
                     }
                 }
             },
             {
-                "name": "Call_Proxy_DB_Write_For_Customer_Cross",
-                "type": "ExecutePipeline",
+                "name": "variableLoadName",
+                "type": "SetVariable",
                 "dependsOn": [
                     {
-                        "activity": "Execute_Customer_Cross_CM_DEV",
-                        "dependencyConditions": ["Succeeded"]
+                        "activity": "GetRunID_DEV",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
                     }
                 ],
                 "policy": {
+                    "secureOutput": false,
                     "secureInput": false
                 },
                 "userProperties": [],
                 "typeProperties": {
-                    "pipeline": {
-                        "referenceName": "proxy_db_write_DEV",
-                        "type": "PipelineReference"
+                    "variableName": "varLoadName",
+                    "value": {
+                        "value": "DEV FX Trades",
+                        "type": "Expression"
+                    }
+                }
+            },
+            {
+                "name": "GetRunID_DEV",
+                "type": "Wait",
+                "dependsOn": [],
+                "userProperties": [],
+                "typeProperties": {
+                    "waitTimeInSeconds": 1
+                }
+            },
+            {
+                "name": "If_Condition1_DEV",
+                "type": "IfCondition",
+                "dependsOn": [
+                    {
+                        "activity": "Set_CPMrunidcount_DEV",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "userProperties": [],
+                "typeProperties": {
+                    "expression": {
+                        "value": "@greater(int(variables('varCPMrunidcount')), 0)",
+                        "type": "Expression"
                     },
-                    "waitOnCompletion": true,
-                    "parameters": {
-                        "PatternAlertsJson": {
-                            "value": "@activity('Execute_Customer_Cross_CM_DEV').output.runOutput",
-                            "type": "Expression"
-                        },
-                        "PatternSurveillanceRunId": {
-                            "value": "@pipeline().parameters.testSurvId",
-                            "type": "Expression"
-                        },
-                        "PatternDatasetRunId": {
-                            "value": "@pipeline().parameters.testDsRunId",
-                            "type": "Expression"
-                        },
-                        "PatternAlertType": {
-                            "value": "Customer Cross CM",
-                            "type": "Expression"
+                    "ifFalseActivities": [
+                        {
+                            "name": "Fail1_DEV",
+                            "type": "Fail",
+                            "dependsOn": [],
+                            "userProperties": [],
+                            "typeProperties": {
+                                "message": "DEV MODE: All data loads not available to process Pipeline",
+                                "errorCode": "DEV_DATA_NOT_AVAILABLE"
+                            }
                         }
+                    ],
+                    "ifTrueActivities": [
+                        {
+                            "name": "SP_GetSruvRunId_DEV",
+                            "type": "SetVariable",
+                            "dependsOn": [
+                                {
+                                    "activity": "ThresholdSetText_DEV",
+                                    "dependencyConditions": [
+                                        "Succeeded"
+                                    ]
+                                }
+                            ],
+                            "policy": {
+                                "secureOutput": false,
+                                "secureInput": false
+                            },
+                            "userProperties": [],
+                            "typeProperties": {
+                                "variableName": "varSurvRunId",
+                                "value": {
+                                    "value": "DEV-SURVRUNID-789",
+                                    "type": "Expression"
+                                }
+                            }
+                        },
+                        {
+                            "name": "CrossProductManipulationNotebook_DEV",
+                            "type": "DatabricksNotebook",
+                            "dependsOn": [
+                                {
+                                    "activity": "Unit_test_DEV",
+                                    "dependencyConditions": [
+                                        "Succeeded"
+                                    ]
+                                }
+                            ],
+                            "policy": {
+                                "timeout": "0.12:00:00",
+                                "retry": 0,
+                                "retryIntervalInSeconds": 30,
+                                "secureOutput": false,
+                                "secureInput": false
+                            },
+                            "userProperties": [],
+                            "typeProperties": {
+                                "notebookPath": "/Shared/2B_Cross_Product_Model_DEV",
+                                "baseParameters": {
+                                    "adf_input_survid": {
+                                        "value": "@string(variables('varSurvRunId'))",
+                                        "type": "Expression"
+                                    },
+                                    "adf_input_runid": {
+                                        "value": "@string(variables('varrunid'))",
+                                        "type": "Expression"
+                                    },
+                                    "adf_input_batchid": {
+                                        "value": "@string(variables('varCOB'))",
+                                        "type": "Expression"
+                                    },
+                                    "adf_input_ds_runid": {
+                                        "value": "@string(variables('varDatasetRunId'))",
+                                        "type": "Expression"
+                                    }
+                                },
+                                "linkedServiceName": {
+                                    "referenceName": "ls_ccams_databricks",
+                                    "type": "LinkedServiceReference",
+                                    "parameters": {
+                                        "subscription_id": {
+                                            "value": "@pipeline().globalParameters.SubscriptionID",
+                                            "type": "Expression"
+                                        },
+                                        "databricks_url": {
+                                            "value": "@pipeline().globalParameters.ccamsDatabricksWS",
+                                            "type": "Expression"
+                                        },
+                                        "workspace_resource_id": {
+                                            "value": "@pipeline().globalParameters.ccamsDatabricksWSResourceID",
+                                            "type": "Expression"
+                                        },
+                                        "cluster_id": {
+                                            "value": "@pipeline().globalParameters.ClusterID",
+                                            "type": "Expression"
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        {
+                            "name": "Call_Traffic_Cop_For_Write",
+                            "type": "ExecutePipeline",
+                            "dependsOn": [
+                                {
+                                    "activity": "CrossProductManipulationNotebook_DEV",
+                                    "dependencyConditions": [
+                                        "Succeeded"
+                                    ]
+                                }
+                            ],
+                            "policy": {
+                                "secureInput": false
+                            },
+                            "userProperties": [],
+                            "typeProperties": {
+                                "pipeline": {
+                                    "referenceName": "Proxy_Write_to_DB_Pipeline_DEV",
+                                    "type": "PipelineReference"
+                                },
+                                "waitOnCompletion": true,
+                                "parameters": {
+                                    "SubscriptionId": {
+                                        "value": "DEV-SUBSCRIPTION",
+                                        "type": "Expression"
+                                    },
+                                    "ResourceGroupName": {
+                                        "value": "DEV-RESOURCE-GROUP",
+                                        "type": "Expression"
+                                    },
+                                    "DataFactoryName": {
+                                        "value": "DEV-DATA-FACTORY",
+                                        "type": "Expression"
+                                    },
+                                    "patternAlertsJson": {
+                                        "value": "@activity('CrossProductManipulationNotebook_DEV').output.runOutput",
+                                        "type": "Expression"
+                                    },
+                                    "patternSurveillanceRunId": {
+                                        "value": "@variables('varSurvRunId')",
+                                        "type": "Expression"
+                                    },
+                                    "patternDatasetRunId": {
+                                        "value": "@variables('varDatasetRunId')",
+                                        "type": "Expression"
+                                    },
+                                    "patternAlertType": {
+                                        "value": "@variables('varAlertType')",
+                                        "type": "Expression"
+                                    }
+                                }
+                            }
+                        },
+                        {
+                            "name": "SurvRunComplete_DEV",
+                            "type": "Wait",
+                            "dependsOn": [
+                                {
+                                    "activity": "Call_Traffic_Cop_For_Write",
+                                    "dependencyConditions": [
+                                        "Succeeded"
+                                    ]
+                                }
+                            ],
+                            "userProperties": [],
+                            "typeProperties": {
+                                "waitTimeInSeconds": 1
+                            }
+                        }
+                    ]
+                }
+            },
+            {
+                "name": "Thresholdlookup_DEV",
+                "type": "SetVariable",
+                "dependsOn": [
+                    {
+                        "activity": "capturedatasetrunid_DEV",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "policy": {
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "typeProperties": {
+                    "variableName": "varThresholdData",
+                    "value": {
+                        "value": "DEV-THRESHOLD-DATA",
+                        "type": "Expression"
+                    }
+                }
+            },
+            {
+                "name": "ThresholdSetText_DEV",
+                "type": "SetVariable",
+                "dependsOn": [
+                    {
+                        "activity": "Thresholdlookup_DEV",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "policy": {
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "typeProperties": {
+                    "variableName": "varThreshold",
+                    "value": {
+                        "value": "derivativeQuantityThreshold_spotOptions=1000000;lookbackTimeThreshold_spotOptions=300;underlyingQuantityThreshold_spotOptions=500000;minQualifiedTradesThreshold_spotOptions=5",
+                        "type": "Expression"
+                    }
+                }
+            },
+            {
+                "name": "Unit_test_DEV",
+                "type": "Wait",
+                "dependsOn": [
+                    {
+                        "activity": "SP_GetSruvRunId_DEV",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "userProperties": [],
+                "typeProperties": {
+                    "waitTimeInSeconds": 1
+                }
+            },
+            {
+                "name": "recordcount_DEV",
+                "type": "SetVariable",
+                "dependsOn": [],
+                "policy": {
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "typeProperties": {
+                    "variableName": "varRecordCount",
+                    "value": {
+                        "value": "5000",
+                        "type": "Expression"
+                    }
+                }
+            },
+            {
+                "name": "SP_GetNewDataSetRunId_DEV",
+                "type": "SetVariable",
+                "dependsOn": [
+                    {
+                        "activity": "recordcount_DEV",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "policy": {
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "typeProperties": {
+                    "variableName": "varDatasetRunId",
+                    "value": {
+                        "value": "DEV-DATASET-RUNID-999",
+                        "type": "Expression"
+                    }
+                }
+            },
+            {
+                "name": "capturedatasetrunid_DEV",
+                "type": "SetVariable",
+                "dependsOn": [
+                    {
+                        "activity": "SP_GetNewDataSetRunId_DEV",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "policy": {
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "typeProperties": {
+                    "variableName": "varDatasetRunId",
+                    "value": {
+                        "value": "@variables('varDatasetRunId')",
+                        "type": "Expression"
+                    }
+                }
+            },
+            {
+                "name": "Append_runids_DEV",
+                "type": "SetVariable",
+                "dependsOn": [
+                    {
+                        "activity": "variableCOB",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    },
+                    {
+                        "activity": "runid",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    },
+                    {
+                        "activity": "variableLoadName",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "policy": {
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "typeProperties": {
+                    "variableName": "varCollectAppendedRunIds",
+                    "value": {
+                        "value": "DEV-COLLECTED-RUNIDS",
+                        "type": "Expression"
+                    }
+                }
+            },
+            {
+                "name": "Set_CPMrunidcount_DEV",
+                "type": "SetVariable",
+                "dependsOn": [
+                    {
+                        "activity": "Append_runids_DEV",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "policy": {
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "typeProperties": {
+                    "variableName": "varCPMrunidcount",
+                    "value": {
+                        "value": "4",
+                        "type": "Expression"
                     }
                 }
             }
         ],
         "parameters": {
             "testSurvId": {
-                "type": "String"
+                "type": "String",
+                "defaultValue": "DEV-TEST-SURVID"
             },
             "testBatchId": {
-                "type": "String"
+                "type": "String",
+                "defaultValue": "DEV-TEST-BATCHID"
             },
             "testDsRunId": {
+                "type": "String",
+                "defaultValue": "DEV-TEST-DSRUNID"
+            }
+        },
+        "variables": {
+            "varCOB": {
+                "type": "String"
+            },
+            "varrunid": {
+                "type": "String"
+            },
+            "varLoadName": {
+                "type": "String"
+            },
+            "varSurvRunId": {
+                "type": "String"
+            },
+            "varThreshold": {
+                "type": "String"
+            },
+            "varRecordCount": {
+                "type": "String"
+            },
+            "varDatasetRunId": {
+                "type": "String"
+            },
+            "varCollectAppendedRunIds": {
+                "type": "String"
+            },
+            "varCPMrunidcount": {
+                "type": "String"
+            },
+            "varAlertType": {
+                "type": "String",
+                "defaultValue": "Cross Product Manipulation"
+            },
+            "varThresholdData": {
                 "type": "String"
             }
         },
@@ -166,12 +518,3 @@
         "annotations": []
     }
 }
-
------------------
-STEP 7: TEST THE COMPLETE END-TO-END FLOW
-Click "Debug" and fill in these test parameters:
-
-testSurvId → "DEV-FINAL-TEST-123"
-testBatchId → "DEV-BATCH-999"
-testDsRunId → "DEV-DSRUN-999"
-------------------------------------
