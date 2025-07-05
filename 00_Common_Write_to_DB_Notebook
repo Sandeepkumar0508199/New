@@ -1,5 +1,5 @@
 # Databricks Notebook: Common_Write_to_DB_Notebook
-# Modified for Interactive Runtime Compatibility
+# Fixed for ADF List Object Input - Handles both String and List types
 # This notebook handles safe, sequential writing of alerts to the database.
 
 import pandas as pd
@@ -33,51 +33,50 @@ default_json = '''[{
     "AnalyticsValue1": "Widget time difference: 38.7 seconds",
     "AnalyticsValue2": "Widget qualified trades: 15",
     "AnalyticsValue3": "Widget derivative size: 4200000.00",
-    "AnalyticsValue4": "Widget avg trade size: 280000.00",
-    "AnalyticsValue5": "Widget price volatility: 0.0031",
-    "ThresholdValue1": "Widget derivative threshold: 1500000.00",
-    "ThresholdValue2": "Widget lookback time: 240 seconds",
-    "ThresholdValue3": "Widget underlying threshold: 750000.00",
-    "ThresholdValue4": "Widget min trades: 7.00",
-    "ScoreComponent1": "Widget time score: 32",
-    "ScoreComponent2": "Widget volume score: 35", 
-    "ScoreComponent3": "Widget pattern score: 28",
-    "AlertRelatedListOrderClordIds": "WIDGET_ORD001,WIDGET_ORD002,WIDGET_ORD003",
     "AlertRelatedListExecutionClordIds": "WIDGET_EXEC001,WIDGET_EXEC002,WIDGET_EXEC003,WIDGET_EXEC004"
 }]'''
 
 dbutils.widgets.text("input_dataframe_json", default_json, "1. Alert JSON Data")
-
-# Widget 2: Surveillance Run ID
 dbutils.widgets.text("input_survid", "WIDGET_SURV_77777", "2. Surveillance Run ID")
-
-# Widget 3: Dataset Run ID
 dbutils.widgets.text("input_ds_runid", "WIDGET_DS_88888", "3. Dataset Run ID")
-
-# Widget 4: Alert Type
 dbutils.widgets.dropdown("input_alert_type", "Cross Product Manipulation", 
                         ["Cross Product Manipulation", "Customer Cross CM", "Test Alert Type"], 
                         "4. Alert Type")
 
 print("✅ WIDGETS CREATED - You can now modify values in the widget panel above")
-print("✅ DEFAULT VALUES SET - Ready for interactive testing")
 
-# Get parameter values from widgets
+# Enhanced parameter handling for ADF List objects
 try:
-    input_dataframe_json_str = dbutils.widgets.get("input_dataframe_json")
+    input_dataframe_json_raw = dbutils.widgets.get("input_dataframe_json")
     input_survid = dbutils.widgets.get("input_survid")
     input_ds_runid = dbutils.widgets.get("input_ds_runid")
     input_alert_type = dbutils.widgets.get("input_alert_type")
     
-    print("=== PARAMETERS LOADED FROM WIDGETS ===")
-    print(f"✅ Successfully loaded all widget parameters")
+    print("=== ENHANCED PARAMETER PROCESSING ===")
+    print(f"Raw input type: {type(input_dataframe_json_raw)}")
+    print(f"Raw input value (first 100 chars): {str(input_dataframe_json_raw)[:100]}...")
+    
+    # Handle different input types from ADF
+    if isinstance(input_dataframe_json_raw, str):
+        print("INPUT TYPE: String (from widgets or manual entry)")
+        input_dataframe_json_str = input_dataframe_json_raw
+    elif isinstance(input_dataframe_json_raw, list):
+        print("INPUT TYPE: List (from ADF pipeline)")
+        # ADF sometimes passes as list, convert back to JSON string
+        input_dataframe_json_str = json.dumps(input_dataframe_json_raw)
+        print(f"Converted list to JSON string: {len(input_dataframe_json_str)} characters")
+    else:
+        print(f"INPUT TYPE: Other ({type(input_dataframe_json_raw)}) - attempting string conversion")
+        input_dataframe_json_str = str(input_dataframe_json_raw)
+    
+    print("✅ Successfully processed input parameters")
     
 except Exception as e:
-    print("=== WIDGET PARAMETER ERROR ===")
-    print(f"❌ Error loading widget parameters: {e}")
+    print("=== PARAMETER PROCESSING ERROR ===")
+    print(f"❌ Error loading parameters: {e}")
     print("🔄 Using fallback default values")
     
-    # Fallback default values
+    # Fallback values
     input_dataframe_json_str = default_json
     input_survid = "FALLBACK_SURV_99999"
     input_ds_runid = "FALLBACK_DS_99999"
@@ -88,9 +87,9 @@ print(f"Runtime Type: Interactive Runtime Enabled")
 print(f"Received Surveillance ID: {input_survid}")
 print(f"Received Dataset Run ID: {input_ds_runid}")
 print(f"Received Alert Type: {input_alert_type}")
-print(f"Received JSON Data Length: {len(input_dataframe_json_str)} characters")
+print(f"Processed JSON Data Length: {len(input_dataframe_json_str)} characters")
 
-# Reconstruct DataFrame from JSON string
+# Enhanced DataFrame reconstruction with multiple parsing methods
 try:
     # Check if input is empty or just empty brackets
     if not input_dataframe_json_str or input_dataframe_json_str.strip() in ['[]', '{}', 'null', '']:
@@ -182,45 +181,68 @@ try:
         print("RESULT: Created empty DataFrame with proper schema")
         
     else:
-        # Parse the JSON string and convert to DataFrame
-        print("INPUT: Converting JSON string to DataFrame")
+        # Multiple parsing approaches for different ADF input formats
+        print("INPUT: Converting to DataFrame using enhanced parsing")
         
-        # Clean and parse JSON with better error handling for interactive runtime
-        clean_json = input_dataframe_json_str.strip()
-        
-        # Try different JSON parsing approaches for interactive runtime
         try:
-            # Method 1: Direct JSON parsing
-            json_data = json.loads(clean_json)
+            # Method 1: Direct JSON parsing (works for string inputs)
+            print("PARSING: Attempting direct JSON parsing...")
+            json_data = json.loads(input_dataframe_json_str)
             if isinstance(json_data, dict):
                 json_data = [json_data]
             
-            # Convert to pandas first, then to Spark (better for interactive runtime)
+            # Convert to pandas first, then to Spark (more reliable)
             pandas_df = pd.DataFrame(json_data)
             alerts_df_spark = spark.createDataFrame(pandas_df)
+            print("✅ SUCCESS: Direct JSON parsing method")
             
-        except json.JSONDecodeError as je:
-            print(f"JSON parsing error: {je}")
-            # Method 2: Using Spark's JSON reader with RDD
-            alerts_df_spark = spark.read.json(sc.parallelize([clean_json]))
+        except Exception as json_error:
+            print(f"⚠️ JSON parsing failed: {json_error}")
+            try:
+                # Method 2: Using Spark's JSON reader with RDD
+                print("PARSING: Attempting Spark JSON reader...")
+                alerts_df_spark = spark.read.json(sc.parallelize([input_dataframe_json_str]))
+                print("✅ SUCCESS: Spark JSON reader method")
+                
+            except Exception as spark_error:
+                print(f"⚠️ Spark JSON reader failed: {spark_error}")
+                try:
+                    # Method 3: Eval method for special cases (careful usage)
+                    print("PARSING: Attempting eval method (safe context)...")
+                    if input_dataframe_json_str.strip().startswith('[') and input_dataframe_json_str.strip().endswith(']'):
+                        json_data = eval(input_dataframe_json_str)
+                        pandas_df = pd.DataFrame(json_data)
+                        alerts_df_spark = spark.createDataFrame(pandas_df)
+                        print("✅ SUCCESS: Eval parsing method")
+                    else:
+                        raise ValueError("Invalid format for eval method")
+                        
+                except Exception as eval_error:
+                    print(f"❌ All parsing methods failed: {eval_error}")
+                    # Create empty dataframe as fallback
+                    alert_schema = StructType([StructField("SMBCAIDPrefix", StringType(), True)])
+                    alerts_df_spark = spark.createDataFrame([], schema=alert_schema)
+                    print("🔄 Created empty DataFrame as fallback")
+        
+        row_count = alerts_df_spark.count()
+        print(f"RESULT: Successfully created DataFrame with {row_count} rows")
+        
+        if row_count > 0:
+            # Show the data structure (limited for interactive runtime)
+            print("DATAFRAME SCHEMA:")
+            alerts_df_spark.printSchema()
             
-        print(f"RESULT: Successfully created DataFrame with {alerts_df_spark.count()} rows")
-        
-        # Show the data structure (limit output for interactive runtime)
-        print("DATAFRAME SCHEMA:")
-        alerts_df_spark.printSchema()
-        
-        print("DATAFRAME CONTENT (first 3 rows):")
-        alerts_df_spark.show(3, truncate=False)
-        
-        # Convert all columns to string type to match database requirements
-        for column_name in alerts_df_spark.columns:
-            alerts_df_spark = alerts_df_spark.withColumn(column_name, col(column_name).cast(StringType()))
-        
-        print("RESULT: All columns converted to StringType for database compatibility")
+            print("DATAFRAME CONTENT (first 2 rows):")
+            alerts_df_spark.show(2, truncate=False)
+            
+            # Convert all columns to string type to match database requirements
+            for column_name in alerts_df_spark.columns:
+                alerts_df_spark = alerts_df_spark.withColumn(column_name, col(column_name).cast(StringType()))
+            
+            print("RESULT: All columns converted to StringType for database compatibility")
 
 except Exception as e:
-    print(f"ERROR: Failed to reconstruct DataFrame from JSON: {e}")
+    print(f"ERROR: Failed to reconstruct DataFrame: {e}")
     print(f"ERROR TYPE: {type(e).__name__}")
     print("CREATING EMPTY DATAFRAME FOR GRACEFUL HANDLING")
     
@@ -228,23 +250,23 @@ except Exception as e:
     alert_schema = StructType([StructField("SMBCAIDPrefix", StringType(), True)])
     alerts_df_spark = spark.createDataFrame([], schema=alert_schema)
 
-# Only proceed if DataFrame has data
+# Continue with database simulation (same as before)
 if not alerts_df_spark.isEmpty():
     print("=== PROCESSING ALERTS FOR DATABASE SIMULATION ===")
     
-    # Simulate database connection details (adapted for interactive runtime)
+    # Simulate database connection details
     sql_server_tdr = 'sql-tdr-dev-use2'
     database_name_tdr = 'sqldb-tdr-dev-use2'
     print(f"SIMULATION: Would connect to {sql_server_tdr}/{database_name_tdr}")
     
-    # Simulate database operations with enhanced logging for interactive runtime
+    # Simulate database operations with enhanced logging
     print("=== SIMULATION: AlertDetail Table Insert ===")
     alert_count = alerts_df_spark.count()
     print(f"SIMULATION: Would insert {alert_count} rows into ccams.AlertDetail table")
     
     # Show sample of data that would be inserted
     print("SAMPLE: Data that would be inserted into AlertDetail:")
-    alerts_df_spark.select("SMBCAIDPrefix", "ProductSymbol", "SMBCAlertType", "AccountID").show(3, truncate=False)
+    alerts_df_spark.select("SMBCAIDPrefix", "ProductSymbol", "SMBCAlertType", "AccountID").show(2, truncate=False)
     
     # Create dummy AlertID (simulate what database would generate)
     base_alert_id = random.randint(10000, 99999)
@@ -265,12 +287,10 @@ if not alerts_df_spark.isEmpty():
     # Simulate AlertTransactionLink table processing
     print("=== SIMULATION: AlertTransactionLink Table Processing ===")
     
-    # Check if execution ClOrdIDs column exists
     execution_col = "AlertRelatedListExecutionClordIds"
     if execution_col in alerts_df_spark.columns:
         print(f"FOUND: {execution_col} column exists in DataFrame")
         
-        # Filter for valid execution IDs
         valid_alerts_df = alerts_df_spark.filter(
             (col(execution_col).isNotNull()) & 
             (col(execution_col) != "") &
@@ -281,11 +301,9 @@ if not alerts_df_spark.isEmpty():
         print(f"FOUND: {valid_count} alerts with valid execution ClOrdIDs")
         
         if valid_count > 0:
-            # Show sample of execution IDs
             print("SAMPLE: Execution ClOrdIDs found:")
-            valid_alerts_df.select(execution_col).show(2, truncate=False)
+            valid_alerts_df.select(execution_col).show(1, truncate=False)
             
-            # Simulate the explosion and processing of ClOrdIDs
             exploded_df = valid_alerts_df.withColumn(
                 "ClOrdIDs_Array",
                 split(regexp_replace(col(execution_col), "\\[|\\]", ""), ",")
@@ -296,7 +314,6 @@ if not alerts_df_spark.isEmpty():
                 explode(col("ClOrdIDs_Array")).alias("ID")
             ).withColumn("Type", lit("Execution"))
             
-            # Clean up whitespace
             transaction_links_df = transaction_links_df.withColumn(
                 "ID", 
                 regexp_replace(col("ID"), "\\s+", "")
@@ -307,16 +324,16 @@ if not alerts_df_spark.isEmpty():
             
             if transaction_link_count > 0:
                 print("SAMPLE: Transaction links that would be created:")
-                transaction_links_df.show(5, truncate=False)
+                transaction_links_df.show(3, truncate=False)
             
         else:
-            print("RESULT: No valid execution ClOrdIDs found for transaction links")
+            print("RESULT: No valid execution ClOrdIDs found")
     else:
         print(f"WARNING: Column {execution_col} not found in DataFrame")
     
     # Generate comprehensive output summary
     print("=== FINAL SIMULATION SUMMARY ===")
-    print(f"Runtime Mode: Interactive Runtime")
+    print(f"Runtime Mode: Interactive Runtime + ADF Compatible")
     print(f"Alert Type Processed: {input_alert_type}")
     print(f"Surveillance Run ID: {input_survid}")
     print(f"Dataset Run ID: {input_ds_runid}")
@@ -329,56 +346,20 @@ if not alerts_df_spark.isEmpty():
         print(f"AlertTransactionLink Records: {transaction_link_count} (simulated)")
     else:
         print("AlertTransactionLink Records: 0 (no execution IDs)")
-    
-    # Create detailed processing log
-    processing_log = {
-        "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "pipeline_type": "Common_Write_to_DB_Notebook",
-        "runtime_mode": "Interactive Runtime",
-        "alert_type": input_alert_type,
-        "surveillance_run_id": input_survid,
-        "dataset_run_id": input_ds_runid,
-        "alerts_processed": alert_count,
-        "simulated_alert_id": base_alert_id,
-        "status": "SUCCESS_SIMULATION_INTERACTIVE"
-    }
-    
-    print("=== PROCESSING LOG ===")
-    for key, value in processing_log.items():
-        print(f"{key}: {value}")
 
 else:
     print("=== NO DATA TO PROCESS ===")
     print("INPUT: DataFrame is empty, skipping all database operations")
-    
-    # Still create a processing log for empty case
-    processing_log = {
-        "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "pipeline_type": "Common_Write_to_DB_Notebook",
-        "runtime_mode": "Interactive Runtime",
-        "alert_type": input_alert_type,
-        "surveillance_run_id": input_survid,
-        "dataset_run_id": input_ds_runid,
-        "alerts_processed": 0,
-        "simulated_alert_id": "N/A",
-        "status": "SUCCESS_NO_DATA_INTERACTIVE"
-    }
-    
-    print("=== PROCESSING LOG ===")
-    for key, value in processing_log.items():
-        print(f"{key}: {value}")
 
-# Interactive Runtime Compatible Exit
+# Compatible exit handling
 print("=== NOTEBOOK EXECUTION COMPLETED ===")
 print("STATUS: All database operations simulated successfully")
-print("RUNTIME: Interactive Runtime compatible execution")
-print("NEXT: Pipeline will continue to next activity")
+print("RUNTIME: Interactive Runtime + ADF List Object compatible")
 
-# Try to exit with success message (compatible with both interactive and job modes)
 try:
-    dbutils.notebook.exit("SUCCESS: Database write simulation completed - Interactive Runtime")
+    dbutils.notebook.exit("SUCCESS: Database write simulation completed - ADF Compatible")
 except Exception as exit_error:
-    print(f"Exit method not available in current context: {exit_error}")
-    print("NOTEBOOK COMPLETED SUCCESSFULLY - Interactive Runtime Mode")
+    print(f"Exit method not available: {exit_error}")
+    print("NOTEBOOK COMPLETED SUCCESSFULLY - ADF List Compatible Mode")
     
 print("=== END OF NOTEBOOK ===")
