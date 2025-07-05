@@ -1,5 +1,5 @@
 {
-    "name": "proxy_db_write_DEV",
+    "name": "Proxy_Write_to_DB_Pipeline_DEV",
     "properties": {
         "activities": [
             {
@@ -14,28 +14,26 @@
                     },
                     "activities": [
                         {
-                            "name": "Simulate_Check_Who_Is_Writing",
+                            "name": "Simulate_Ask_ADF_Who_Is_Writing",
                             "type": "Wait",
                             "dependsOn": [],
                             "userProperties": [],
                             "typeProperties": {
-                                "waitTimeInSeconds": 1
+                                "waitTimeInSeconds": 2
                             }
                         },
                         {
-                            "name": "Simulate_Filter_Busy_Writers",
+                            "name": "Simulate_Filter_To_Find_Busy_Writers",
                             "type": "SetVariable",
                             "dependsOn": [
                                 {
-                                    "activity": "Simulate_Check_Who_Is_Writing",
-                                    "dependencyConditions": [
-                                        "Succeeded"
-                                    ]
+                                    "activity": "Simulate_Ask_ADF_Who_Is_Writing",
+                                    "dependencyConditions": ["Succeeded"]
                                 }
                             ],
                             "userProperties": [],
                             "typeProperties": {
-                                "variableName": "simulatedBusyWriters",
+                                "variableName": "simulatedBusyCount",
                                 "value": {
                                     "value": "0",
                                     "type": "Expression"
@@ -43,21 +41,19 @@
                             }
                         },
                         {
-                            "name": "Update_Active_Runs_Count_DEV",
+                            "name": "Update_Active_Runs_Count",
                             "type": "SetVariable",
                             "dependsOn": [
                                 {
-                                    "activity": "Simulate_Filter_Busy_Writers",
-                                    "dependencyConditions": [
-                                        "Succeeded"
-                                    ]
+                                    "activity": "Simulate_Filter_To_Find_Busy_Writers",
+                                    "dependencyConditions": ["Succeeded"]
                                 }
                             ],
                             "userProperties": [],
                             "typeProperties": {
                                 "variableName": "activeRuns",
                                 "value": {
-                                    "value": "@variables('simulatedBusyWriters')",
+                                    "value": "@variables('simulatedBusyCount')",
                                     "type": "Expression"
                                 }
                             }
@@ -67,10 +63,8 @@
                             "type": "IfCondition",
                             "dependsOn": [
                                 {
-                                    "activity": "Update_Active_Runs_Count_DEV",
-                                    "dependencyConditions": [
-                                        "Succeeded"
-                                    ]
+                                    "activity": "Update_Active_Runs_Count",
+                                    "dependencyConditions": ["Succeeded"]
                                 }
                             ],
                             "userProperties": [],
@@ -86,7 +80,7 @@
                                         "dependsOn": [],
                                         "userProperties": [],
                                         "typeProperties": {
-                                            "waitTimeInSeconds": 3
+                                            "waitTimeInSeconds": 5
                                         }
                                     }
                                 ]
@@ -97,14 +91,12 @@
                 "timeout": "7.00:00:00"
             },
             {
-                "name": "Execute_Common_Write_DB_Pipeline_DEV",
+                "name": "Send_To_Shared_Writing_Station",
                 "type": "ExecutePipeline",
                 "dependsOn": [
                     {
                         "activity": "Until_Shared_Writer_Is_Free_DEV",
-                        "dependencyConditions": [
-                            "Succeeded"
-                        ]
+                        "dependencyConditions": ["Succeeded"]
                     }
                 ],
                 "policy": {
@@ -119,19 +111,19 @@
                     "waitOnCompletion": true,
                     "parameters": {
                         "alertsJsonInput": {
-                            "value": "@pipeline().parameters.PatternAlertsJson",
+                            "value": "@pipeline().parameters.patternAlertsJson",
                             "type": "Expression"
                         },
                         "surveillanceRunIDInput": {
-                            "value": "@pipeline().parameters.PatternSurveillanceRunId",
+                            "value": "@pipeline().parameters.patternSurveillanceRunId",
                             "type": "Expression"
                         },
                         "datasetRunIDInput": {
-                            "value": "@pipeline().parameters.PatternDatasetRunId",
+                            "value": "@pipeline().parameters.patternDatasetRunId",
                             "type": "Expression"
                         },
                         "alertTypeInput": {
-                            "value": "@pipeline().parameters.PatternAlertType",
+                            "value": "@pipeline().parameters.patternAlertType",
                             "type": "Expression"
                         }
                     }
@@ -139,16 +131,25 @@
             }
         ],
         "parameters": {
-            "PatternAlertsJson": {
+            "SubscriptionId": {
                 "type": "String"
             },
-            "PatternSurveillanceRunId": {
+            "ResourceGroupName": {
                 "type": "String"
             },
-            "PatternDatasetRunId": {
+            "DataFactoryName": {
                 "type": "String"
             },
-            "PatternAlertType": {
+            "patternAlertsJson": {
+                "type": "String"
+            },
+            "patternSurveillanceRunId": {
+                "type": "String"
+            },
+            "patternDatasetRunId": {
+                "type": "String"
+            },
+            "patternAlertType": {
                 "type": "String"
             }
         },
@@ -157,7 +158,7 @@
                 "type": "String",
                 "defaultValue": "1"
             },
-            "simulatedBusyWriters": {
+            "simulatedBusyCount": {
                 "type": "String",
                 "defaultValue": "0"
             }
@@ -168,19 +169,3 @@
         "annotations": []
     }
 }
-
-
---------------
-Test Step 3 (proxy_db_write_DEV):
-
-Go to your proxy_db_write_DEV pipeline
-Click "Debug" or "Add trigger" → "Trigger now"
-Fill in these test parameters:
-
-PatternAlertsJson → "[{\"SMBCAIDPrefix\":\"TEST_001\",\"ProductSymbol\":\"USDJPY\",\"SMBCAlertType\":\"Cross Product Manipulation\",\"AccountID\":\"TEST_ACCOUNT\"}]"
-PatternSurveillanceRunId → "DEV-SURVID-789"
-PatternDatasetRunId → "DEV-DSRUNID-789"
-PatternAlertType → "Cross Product Manipulation"
-
-
-Click OK to run
