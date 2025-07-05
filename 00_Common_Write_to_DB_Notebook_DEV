@@ -1,48 +1,217 @@
-print("Starting Common Write Notebook - DEV Version")
+# Databricks Notebook: Common_Write_to_DB_Notebook - DEV VERSION
+# This notebook handles safe, sequential writing of alerts to the database.
+# DEV VERSION: Uses print statements instead of real database writes
+
+import pandas as pd
+from pyspark.sql.functions import col, lit, split, explode, regexp_replace
+from pyspark.sql.types import StructType, StructField, StringType
+import json
 
 # Set up widgets to receive data from ADF
 dbutils.widgets.text("input_dataframe_json", "[]")
-dbutils.widgets.text("input_survid", "DEV-SURVID-123") 
+dbutils.widgets.text("input_survid", "DEV-SURVID-123")
 dbutils.widgets.text("input_ds_runid", "DEV-DSRUNID-456")
 dbutils.widgets.text("input_alert_type", "DEV Alert Type")
 
-# Get the values from widgets
-input_json = dbutils.widgets.get("input_dataframe_json")
-survid = dbutils.widgets.get("input_survid")
-ds_runid = dbutils.widgets.get("input_ds_runid")
-alert_type = dbutils.widgets.get("input_alert_type")
+# Get inputs from ADF
+input_dataframe_json_str = dbutils.widgets.get("input_dataframe_json")
+input_survid = dbutils.widgets.get("input_survid")
+input_ds_runid = dbutils.widgets.get("input_ds_runid")
+input_alert_type = dbutils.widgets.get("input_alert_type")
 
-print(f"Surveillance ID: {survid}")
-print(f"Dataset Run ID: {ds_runid}")
-print(f"Alert Type: {alert_type}")
-print(f"JSON length: {len(input_json)}")
+print(f"DEV MODE: Received parameters")
+print(f"Surveillance ID: {input_survid}")
+print(f"Dataset Run ID: {input_ds_runid}")
+print(f"Alert Type: {input_alert_type}")
+print(f"JSON data length: {len(input_dataframe_json_str)}")
 
-# If no JSON data, use dummy data for testing
-if not input_json or input_json.strip() in ['[]', '{}']:
-    print("No JSON data provided, using dummy test data")
-    dummy_data = '''[{
-        "SMBCAIDPrefix": "DEV_TEST_001",
-        "ProductSymbol": "USDJPY",
-        "SMBCAlertType": "Cross Product Manipulation",
-        "AccountID": "DEV_ACCOUNT_001",
-        "AlertRelatedListExecutionClordIds": "DEV_EXEC_001,DEV_EXEC_002"
-    }]'''
-    input_json = dummy_data
-
-# Parse the JSON
-import json
+# Reconstruct DataFrame from JSON string
 try:
-    alerts_data = json.loads(input_json)
-    print(f"SUCCESS: Found {len(alerts_data)} alerts")
-    
-    # Show what we found
-    for i, alert in enumerate(alerts_data):
-        print(f"Alert {i+1}:")
-        print(f"  Type: {alert['SMBCAlertType']}")
-        print(f"  Account: {alert['AccountID']}")
-        print(f"  Symbol: {alert['ProductSymbol']}")
-    
-except Exception as e:
-    print(f"ERROR: {e}")
+    # If the input text is empty or just '[]', it means no alerts were found by the chef
+    if not input_dataframe_json_str or input_dataframe_json_str.strip() == '[]':
+        # Create an empty table with the correct column names
+        alert_schema = StructType([
+            StructField("SMBCAIDPrefix", StringType(), True),
+            StructField("ProductSymbol", StringType(), True),
+            StructField("SMBCALertTime", StringType(), True),
+            StructField("SMBCLocalAlertTime", StringType(), True),
+            StructField("SMBCAlertType", StringType(), True),
+            StructField("IssuerName", StringType(), True),
+            StructField("ShortAlertDescription", StringType(), True),
+            StructField("TotalScore", StringType(), True),
+            StructField("BusinessUnit", StringType(), True),
+            StructField("SMBCAlertGenerationDate", StringType(), True),
+            StructField("ProductName", StringType(), True),
+            StructField("ProductID", StringType(), True),
+            StructField("AccountID", StringType(), True),
+            StructField("Exchange", StringType(), True),
+            StructField("AssetClass", StringType(), True),
+            StructField("LongDescription", StringType(), True),
+            StructField("AnalyticsValue1", StringType(), True),
+            StructField("AnalyticsValue2", StringType(), True),
+            StructField("AnalyticsValue3", StringType(), True),
+            StructField("AnalyticsValue4", StringType(), True),
+            StructField("AnalyticsValue5", StringType(), True),
+            StructField("AnalyticsValue6", StringType(), True),
+            StructField("AnalyticsValue7", StringType(), True),
+            StructField("AnalyticsValue8", StringType(), True),
+            StructField("AnalyticsValue9", StringType(), True),
+            StructField("AnalyticsValue10", StringType(), True),
+            StructField("AnalyticsValue11", StringType(), True),
+            StructField("AnalyticsValue12", StringType(), True),
+            StructField("AnalyticsValue13", StringType(), True),
+            StructField("AnalyticsValue14", StringType(), True),
+            StructField("AnalyticsValue15", StringType(), True),
+            StructField("AnalyticsValue16", StringType(), True),
+            StructField("AnalyticsValue17", StringType(), True),
+            StructField("AnalyticsValue18", StringType(), True),
+            StructField("AnalyticsValue19", StringType(), True),
+            StructField("AnalyticsValue20", StringType(), True),
+            StructField("ThresholdValue1", StringType(), True),
+            StructField("ThresholdValue2", StringType(), True),
+            StructField("ThresholdValue3", StringType(), True),
+            StructField("ThresholdValue4", StringType(), True),
+            StructField("ThresholdValue5", StringType(), True),
+            StructField("ThresholdValue6", StringType(), True),
+            StructField("ThresholdValue7", StringType(), True),
+            StructField("ThresholdValue8", StringType(), True),
+            StructField("ThresholdValue9", StringType(), True),
+            StructField("ThresholdValue10", StringType(), True),
+            StructField("ThresholdValue11", StringType(), True),
+            StructField("ThresholdValue12", StringType(), True),
+            StructField("ThresholdValue13", StringType(), True),
+            StructField("ThresholdValue14", StringType(), True),
+            StructField("ThresholdValue15", StringType(), True),
+            StructField("ThresholdValue16", StringType(), True),
+            StructField("ThresholdValue17", StringType(), True),
+            StructField("ThresholdValue18", StringType(), True),
+            StructField("ThresholdValue19", StringType(), True),
+            StructField("ThresholdValue20", StringType(), True),
+            StructField("ScoreComponent1", StringType(), True),
+            StructField("ScoreComponent2", StringType(), True),
+            StructField("ScoreComponent3", StringType(), True),
+            StructField("ScoreComponent4", StringType(), True),
+            StructField("ScoreComponent5", StringType(), True),
+            StructField("ScoreComponent6", StringType(), True),
+            StructField("ScoreComponent7", StringType(), True),
+            StructField("ScoreComponent8", StringType(), True),
+            StructField("ScoreComponent9", StringType(), True),
+            StructField("ScoreComponent10", StringType(), True),
+            StructField("ScoreComponent11", StringType(), True),
+            StructField("ScoreComponent12", StringType(), True),
+            StructField("ScoreComponent13", StringType(), True),
+            StructField("ScoreComponent14", StringType(), True),
+            StructField("ScoreComponent15", StringType(), True),
+            StructField("ScoreComponent16", StringType(), True),
+            StructField("ScoreComponent17", StringType(), True),
+            StructField("ScoreComponent18", StringType(), True),
+            StructField("ScoreComponent19", StringType(), True),
+            StructField("ScoreComponent20", StringType(), True),
+            StructField("AlertRelatedListOrderClordIds", StringType(), True),
+            StructField("AlertRelatedListExecutionClordIds", StringType(), True)
+        ])
+        alerts_df_spark = spark.createDataFrame([], schema=alert_schema)
+        print("DEV MODE: Received empty DataFrame for writing. No alerts to process.")
+    else:
+        # Turn the big text (JSON string) back into a table (Spark DataFrame)
+        alerts_df_spark = spark.read.json(sc.parallelize([input_dataframe_json_str]))
+        print(f"DEV MODE: Received DataFrame with {alerts_df_spark.count()} rows for writing.")
+        alerts_df_spark.show(truncate=False)
+        
+        # Make sure all columns in the table are text (StringType)
+        for c in alerts_df_spark.columns:
+            alerts_df_spark = alerts_df_spark.withColumn(c, col(c).cast(StringType()))
 
-print("STEP 1 COMPLETE - Notebook is working!")
+except Exception as e:
+    print(f"DEV MODE: Error reconstructing DataFrame from JSON: {e}")
+    dbutils.notebook.exit(f"Failed to reconstruct DataFrame: {e}")
+
+# Only proceed if the DataFrame is not empty
+if not alerts_df_spark.isEmpty():
+    
+    # DEV MODE: Print instead of database connection
+    print("DEV MODE: Simulating database connection...")
+    print("DEV MODE: Connection details:")
+    print("  Server: sql-tdr-dev-use2")
+    print("  Database: sqldb-tdr-dev-use2")
+    print("  Authentication: Simulated")
+    
+    # DEV MODE: Print instead of insert into AlertDetail table
+    print("DEV MODE: Simulating insert into ccams.AlertDetail...")
+    try:
+        print(f"DEV MODE: Would insert {alerts_df_spark.count()} rows into ccams.AlertDetail")
+        
+        # Show what would be inserted
+        alerts_pandas = alerts_df_spark.toPandas()
+        print("DEV MODE: Alert details that would be inserted:")
+        for index, row in alerts_pandas.iterrows():
+            print(f"  Alert {index + 1}:")
+            print(f"    Alert Type: {row.get('SMBCAlertType', 'N/A')}")
+            print(f"    Account ID: {row.get('AccountID', 'N/A')}")
+            print(f"    Product Symbol: {row.get('ProductSymbol', 'N/A')}")
+            print(f"    Description: {row.get('ShortAlertDescription', 'N/A')}")
+        
+        print("DEV MODE: Successfully simulated insert into ccams.AlertDetail.")
+    except Exception as e:
+        print(f"DEV MODE: Error simulating AlertDetail insert: {e}")
+        dbutils.notebook.exit(f"Failed to simulate AlertDetail write: {e}")
+    
+    # DEV MODE: Simulate getting the newly generated AlertID
+    print("DEV MODE: Simulating fetch of MAX AlertID...")
+    try:
+        AlertID = 12345  # Dummy AlertID for DEV
+        print(f"DEV MODE: Simulated AlertID: {AlertID}")
+    except Exception as e:
+        print(f"DEV MODE: Error simulating AlertID fetch: {e}")
+        dbutils.notebook.exit(f"Failed to simulate AlertID fetch: {e}")
+    
+    # DEV MODE: Simulate insert into AlertLink table
+    print("DEV MODE: Simulating insert into ccams.AlertLink...")
+    try:
+        print("DEV MODE: AlertLink data that would be inserted:")
+        print(f"  AlertID: {AlertID}")
+        print(f"  SurveillanceRunId: {input_survid}")
+        print(f"  DataRecordID: {input_ds_runid}")
+        print("DEV MODE: Successfully simulated insert into ccams.AlertLink.")
+    except Exception as e:
+        print(f"DEV MODE: Error simulating AlertLink insert: {e}")
+        dbutils.notebook.exit(f"Failed to simulate AlertLink write: {e}")
+    
+    # DEV MODE: Simulate insert into AlertTransactionLink table
+    print("DEV MODE: Simulating insert into ccams.AlertTransactionLink...")
+    try:
+        # Check if our alert notes contain the 'ExecID' part
+        if "AlertRelatedListExecutionClordIds" in alerts_df_spark.columns:
+            # Filter out any notes that don't actually have 'ExecID' details
+            valid_alerts_df = alerts_df_spark.filter(
+                (col("AlertRelatedListExecutionClordIds").isNotNull()) &
+                (col("AlertRelatedListExecutionClordIds") != "")
+            )
+            
+            if not valid_alerts_df.isEmpty():
+                execution_ids_list = valid_alerts_df.select("AlertRelatedListExecutionClordIds").collect()
+                print("DEV MODE: AlertTransactionLink data that would be inserted:")
+                for row in execution_ids_list:
+                    exec_ids = row["AlertRelatedListExecutionClordIds"]
+                    if exec_ids and exec_ids != "":
+                        # Remove brackets and split by comma
+                        clean_ids = exec_ids.replace("[", "").replace("]", "").split(",")
+                        for exec_id in clean_ids:
+                            exec_id = exec_id.strip()
+                            if exec_id:
+                                print(f"  AlertID: {AlertID}, ID: {exec_id}, Type: Execution")
+                
+                print("DEV MODE: Successfully simulated insert into ccams.AlertTransactionLink.")
+            else:
+                print("DEV MODE: No valid AlertRelatedListExecutionClordIds to simulate for AlertTransactionLink.")
+        else:
+            print("DEV MODE: Column 'AlertRelatedListExecutionClordIds' not found. Skipping AlertTransactionLink simulation.")
+    except Exception as e:
+        print(f"DEV MODE: Error simulating AlertTransactionLink insert: {e}")
+        dbutils.notebook.exit(f"Failed to simulate AlertTransactionLink write: {e}")
+
+else:
+    print("DEV MODE: No data in DataFrame to write to database. Skipping all write operations.")
+
+print("DEV MODE: Notebook execution finished: Data write process completed.")
+dbutils.notebook.exit("Success")
