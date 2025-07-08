@@ -324,3 +324,8 @@ Key Databases: - Primary Database: sqldb-tdr-qa-use2 - Main Schemas: dbo, ccams 
 Critical Data Flow Objects: 1. rel_DenodoForeignExchangeView - Source FX data 2. rel_DenodoSwapView - Source Swap data 3. AlertDetail - Generated alerts storage 4. ThresholdSet - Configuration parameters 5. TDRLoadstatusView/TDRLoadStatusView - Data load tracking 6. DQ_Check - Data quality validation pipeline 7. ccams-scope secrets - Authentication & security
 🚀 FINAL VERIFICATION STATUS: 100% COMPLETE - NO OBJECTS MISSED
 This ultra-comprehensive analysis now covers every single database object, pipeline dependency, security configuration, and linked service referenced across all your scripts. The million-time verification process identified several additional objects that were initially categorized as configuration rather than database objects.
+---------------------------------------------
+
+SELECT LoadName, LoadStatus, LoadDate 
+FROM TDRLoadStatus 
+WHERE LoadName IN ('TT', 'R8FIN', 'TOMS')
