@@ -8,6 +8,6 @@ LoadName in ('CME-WellsFargo') and LoadStatus in ('Succeeded')
 and BatchId = CASE 
     WHEN '@{pipeline().parameters.RUNProcessDate}' = '' 
     THEN (select min(batchid) from [dbo].[TDRLoadstatusView] where LoadName in ('CME-WellsFargo') and LoadStatus='Succeeded')
-    ELSE CAST(REPLACE('@{pipeline().parameters.RUNProcessDate}', '-', '') AS INT)
+    ELSE '@{pipeline().parameters.RUNProcessDate}'
 END
 ) a where nbr=1
