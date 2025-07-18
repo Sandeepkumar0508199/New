@@ -1,11 +1,7 @@
-select BatchId, LoadName, Asset,Runid,UniqueIdentifier from (
-select LoadName,batchId,Asset,Uniqueidentifier ,ROW_NUMBER() over (partition by batchid order by LoadName ) as nbr 
+select BatchId, LoadName, Asset,runid from (
+select LoadName,batchId,Asset,runid ,ROW_NUMBER() over (partition by batchid order by LoadName ) as nbr 
 from [dbo].[TDRLoadstatusView]
-where BatchId = CASE 
-    WHEN '@{pipeline().parameters.RUNProcessDate}' = '' OR '@{pipeline().parameters.RUNProcessDate}' IS NULL
-    THEN (select min(batchid) from [dbo].[TDRLoadstatusView] where LoadStatus='Succeeded')
-    ELSE CAST(REPLACE('@{pipeline().parameters.RUNProcessDate}', '-', '') AS INT)
-END
+where BatchId = '@{pipeline().parameters.RUNProcessDate}'
 and LoadName in ('CM FX Trades', 'NYB FX Trades', 'NYB Swap Trades', 'CM Swap Trades')
 and LoadStatus='Succeeded'
 ) a where nbr=1
