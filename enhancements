@@ -11,4 +11,3 @@ and BatchId = CASE
     ELSE CAST(REPLACE('@{pipeline().parameters.RUNProcessDate}', '-', '') AS INT)
 END
 ) a where nbr=1
---order by BatchId
