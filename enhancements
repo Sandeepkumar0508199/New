@@ -1,0 +1,13 @@
+select BatchId, LoadName, Asset,Runid,UniqueIdentifier from (
+select LoadName,batchId,Asset,Uniqueidentifier ,ROW_NUMBER() over (partition by batchid order by LoadName ) as nbr 
+from [dbo].[TDRLoadstatusView]
+where BatchId=(
+    select min(batchid) 
+    from [dbo].[TDRLoadstatusView] 
+    where CONVERT(date, CreatedDate) = CONVERT(date, '@{pipeline().parameters.RUNProcessDate}')
+    and LoadName in ('CM FX Trades', 'NYB FX Trades', 'NYB Swap Trades', 'CM Swap Trades')
+    and LoadStatus='Succeeded'
+)
+and LoadName in ('CM FX Trades', 'NYB FX Trades', 'NYB Swap Trades', 'CM Swap Trades')
+and LoadStatus='Succeeded'
+) a where nbr=1
