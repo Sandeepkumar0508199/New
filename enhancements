@@ -1,7 +1,14 @@
-select BatchId, LoadName, Asset,runid from (
-select LoadName,batchId,Asset,runid ,ROW_NUMBER() over (partition by batchid order by LoadName ) as nbr 
+select BatchId, LoadName, Asset,runid from
+(
+select runid
+,LoadName,batchId,Asset ,ROW_NUMBER() over (partition by batchid order by LoadName ) nbr
 from [dbo].[TDRLoadstatusView]
-where BatchId = '@{pipeline().parameters.RUNProcessDate}'
-and LoadName in ('CM FX Trades', 'NYB FX Trades', 'NYB Swap Trades', 'CM Swap Trades')
-and LoadStatus='Succeeded'
+where
+LoadName in ('CME-WellsFargo') and LoadStatus in ('Succeeded')
+and BatchId = CASE 
+    WHEN '@{pipeline().parameters.RUNProcessDate}' = '' 
+    THEN (select min(batchid) from [dbo].[TDRLoadstatusView] where LoadName in ('CME-WellsFargo') and LoadStatus='Succeeded')
+    ELSE CAST(REPLACE('@{pipeline().parameters.RUNProcessDate}', '-', '') AS INT)
+END
 ) a where nbr=1
+--order by BatchId
