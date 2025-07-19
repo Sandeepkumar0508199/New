@@ -1,0 +1,823 @@
+{
+  "name": "2B Cross Product Manipulation PL",
+  "properties": {
+    "description": "2B Cross Product Manipulation",
+    "activities": [
+      {
+        "name": "variableCOB",
+        "type": "SetVariable",
+        "dependsOn": [
+          {
+            "activity": "GetRunID",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          }
+        ],
+        "policy": {
+          "secureOutput": false,
+          "secureInput": false
+        },
+        "userProperties": [],
+        "typeProperties": {
+          "variableName": "varCOB",
+          "value": {
+            "value": "@activity('GetRunID').output.resultSets[0].rows[0].BatchId",
+            "type": "Expression"
+          }
+        }
+      },
+      {
+        "name": "GetRunID",
+        "type": "Script",
+        "dependsOn": [],
+        "policy": {
+          "timeout": "0.12:00:00",
+          "retry": 0,
+          "retryIntervalInSeconds": 30,
+          "secureOutput": false,
+          "secureInput": false
+        },
+        "userProperties": [],
+        "linkedServiceName": {
+          "referenceName": "ls_tdr_db",
+          "type": "LinkedServiceReference",
+          "parameters": {
+            "tdr_servername": {
+              "value": "@pipeline().globalParameters.tdrServerName",
+              "type": "Expression"
+            },
+            "tdr_databasename": {
+              "value": "@pipeline().globalParameters.tdrDatabaseName",
+              "type": "Expression"
+            },
+            "service_principal_Id": {
+              "value": "@pipeline().globalParameters.ServicePrincipalID",
+              "type": "Expression"
+            },
+            "secret": "secret",
+            "subscription_id": {
+              "value": "@pipeline().globalParameters.SubscriptionID",
+              "type": "Expression"
+            },
+            "tenant_id": {
+              "value": "@pipeline().globalParameters.TenantID",
+              "type": "Expression"
+            },
+            "keyvault": {
+              "value": "@pipeline().globalParameters.ccamsKeyVault",
+              "type": "Expression"
+            }
+          }
+        },
+        "typeProperties": {
+          "scripts": [
+            {
+              "type": "Query",
+              "text": "select BatchId, LoadName, Asset,Runid,UniqueIdentifier from (\nselect LoadName,batchId,Asset,Uniqueidentifier ,ROW_NUMBER() over (partition by batchid order by LoadName )\nnor from [dbo].[TDRLoadstatusView]\nwhere BatchId=(select min(batchid) from [dbo].[TDRLoadstatusView] where LoadStatus='Succeeded')\nand LoadName in ('CM FX Trades', 'NYB FX Trades', 'NYB Swap Trades', 'CM Swap Trades')\nand LoadStatus='Succeeded'\n--order by BatchId\n\n) a where nbr=1\n--order by BatchId"
+            }
+          ],
+          "scriptBlockExecutionTimeout": "02:00:00"
+        }
+      },
+      {
+        "name": "Thresholdlookup",
+        "description": "",
+        "type": "Lookup",
+        "dependsOn": [
+          {
+            "activity": "capturedatasetrunid",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          }
+        ],
+        "policy": {
+          "timeout": "0.12:00:00",
+          "retry": 0,
+          "retryIntervalInSeconds": 30,
+          "secureOutput": false,
+          "secureInput": false
+        },
+        "userProperties": [],
+        "typeProperties": {
+          "source": {
+            "type": "AzureSqlSource",
+            "sqlReaderQuery": "with func_lookup as (\nselect max(T.UpdatedOn) as UpdatedOn , T.ThresholdSetText as ThresholdSetText, S.Name as Name, T.Scenario_Id as Scenario_Id\nfrom [ccams].[Thresholdset] T\ninner join [ccams].[Surveillance] S\non S.SurveillanceId = T.Scenario_Id\nwhere S.SurveillanceId = 11\ngroup by T.UpdatedOn, T.ThresholdSetText, S.Name, T.Scenario_Id\n)\nselect top 1 max(UpdatedOn) as UpdatedOn, ThresholdSetText, Name, Scenario_Id\nfrom func_lookup\ngroup by ThresholdSetText, Name, Scenario_Id\norder by UpdatedOn desc\n",
+            "queryTimeout": "02:00:00",
+            "partitionOption": "None"
+          },
+          "dataset": {
+            "referenceName": "tdr_db_source",
+            "type": "DatasetReference",
+            "parameters": {
+              "server": {
+                "value": "@pipeline().globalParameters.tdrServerName",
+                "type": "Expression"
+              },
+              "database": {
+                "value": "@pipeline().globalParameters.tdrDatabaseName",
+                "type": "Expression"
+              },
+              "service_principal_Id": {
+                "value": "@pipeline().globalParameters.ServicePrincipalID",
+                "type": "Expression"
+              },
+              "subscription_id": {
+                "value": "@pipeline().globalParameters.SubscriptionID",
+                "type": "Expression"
+              },
+              "tenant_id": {
+                "value": "@pipeline().globalParameters.TenantID",
+                "type": "Expression"
+              },
+              "keyvault": {
+                "value": "@pipeline().globalParameters.ccamsKeyVault",
+                "type": "Expression"
+              }
+            }
+          }
+        }
+      },
+      {
+        "name": "ThresholdSetText",
+        "type": "SetVariable",
+        "dependsOn": [
+          {
+            "activity": "Thresholdlookup",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          }
+        ],
+        "policy": {
+          "secureOutput": false,
+          "secureInput": false
+        },
+        "userProperties": [],
+        "typeProperties": {
+          "variableName": "varThreshold",
+          "value": {
+            "value": "@activity('Thresholdlookup').output.firstRow.ThresholdSetText",
+            "type": "Expression"
+          }
+        }
+      },
+      {
+        "name": "recordcount",
+        "type": "Script",
+        "dependsOn": [],
+        "policy": {
+          "timeout": "0.12:00:00",
+          "retry": 0,
+          "retryIntervalInSeconds": 30,
+          "secureOutput": false,
+          "secureInput": false
+        },
+        "userProperties": [],
+        "linkedServiceName": {
+          "referenceName": "ls_tdr_db",
+          "type": "LinkedServiceReference",
+          "parameters": {
+            "tdr_servername": {
+              "value": "@pipeline().globalParameters.tdrServerName",
+              "type": "Expression"
+            },
+            "tdr_databasename": {
+              "value": "@pipeline().globalParameters.tdrDatabaseName",
+              "type": "Expression"
+            },
+            "service_principal_Id": {
+              "value": "@pipeline().globalParameters.ServicePrincipalID",
+              "type": "Expression"
+            },
+            "secret": "secret",
+            "subscription_id": {
+              "value": "@pipeline().globalParameters.SubscriptionID",
+              "type": "Expression"
+            },
+            "tenant_id": {
+              "value": "@pipeline().globalParameters.TenantID",
+              "type": "Expression"
+            },
+            "keyvault": {
+              "value": "@pipeline().globalParameters.ccamsKeyVault",
+              "type": "Expression"
+            }
+          }
+        },
+        "typeProperties": {
+          "scripts": [
+            {
+              "parameters": [
+                {
+                  "name": "varid",
+                  "type": "Int32",
+                  "value": {
+                    "value": "@variables('varCOB')",
+                    "type": "Expression"
+                  },
+                  "direction": "Input"
+                }
+              ],
+              "type": "Query",
+              "text": {
+                "value": "select sum(recordcount) recordcount from (\nselect count(1) recordcount from DenodoForeignExchangeView where BatchID =@varid union\nselect count(1) recordcount from DenodoSwapView where BatchID =@varid \n) x",
+                "type": "Expression"
+              }
+            }
+          ],
+          "scriptBlockExecutionTimeout": "02:00:00"
+        }
+      },
+      {
+        "name": "varRecordCount",
+        "type": "SetVariable",
+        "dependsOn": [
+          {
+            "activity": "recordcount",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          }
+        ],
+        "policy": {
+          "secureOutput": false,
+          "secureInput": false
+        },
+        "userProperties": [],
+        "typeProperties": {
+          "variableName": "varRecordCount",
+          "value": {
+            "value": "@activity('recordcount').output.resultSets[0].rows[0].recordcount",
+            "type": "Expression"
+          }
+        }
+      },
+      {
+        "name": "SP_GetNewDataSetRunId",
+        "type": "Script",
+        "dependsOn": [
+          {
+            "activity": "varRecordCount",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          }
+        ],
+        "policy": {
+          "timeout": "0.12:00:00",
+          "retry": 0,
+          "retryIntervalInSeconds": 30,
+          "secureOutput": false,
+          "secureInput": false
+        },
+        "userProperties": [],
+        "linkedServiceName": {
+          "referenceName": "ls_tdr_db",
+          "type": "LinkedServiceReference",
+          "parameters": {
+            "tdr_servername": {
+              "value": "@pipeline().globalParameters.tdrServerName",
+              "type": "Expression"
+            },
+            "tdr_databasename": {
+              "value": "@pipeline().globalParameters.tdrDatabaseName",
+              "type": "Expression"
+            },
+            "service_principal_Id": {
+              "value": "@pipeline().globalParameters.ServicePrincipalID",
+              "type": "Expression"
+            },
+            "secret": "secret",
+            "subscription_id": {
+              "value": "@pipeline().globalParameters.SubscriptionID",
+              "type": "Expression"
+            },
+            "tenant_id": {
+              "value": "@pipeline().globalParameters.TenantID",
+              "type": "Expression"
+            },
+            "keyvault": {
+              "value": "@pipeline().globalParameters.ccamsKeyVault",
+              "type": "Expression"
+            }
+          }
+        },
+        "typeProperties": {
+          "scripts": [
+            {
+              "parameters": [
+                {
+                  "name": "varbatchId",
+                  "type": "Int32",
+                  "value": {
+                    "value": "@variables('varCOB')",
+                    "type": "Expression"
+                  },
+                  "direction": "Input"
+                },
+                {
+                  "name": "varexecutionStartTime",
+                  "type": "Datetime",
+                  "value": {
+                    "value": "@formatDateTime(utcNow(), 'dd-MMM-yyyy hh:mm:ss tt')",
+                    "type": "Expression"
+                  },
+                  "direction": "Input"
+                },
+                {
+                  "name": "varrecordCount",
+                  "type": "Int32",
+                  "value": {
+                    "value": "@variables('varRecordCount')",
+                    "type": "Expression"
+                  },
+                  "direction": "Input"
+                },
+                {
+                  "name": "varexecutingUser",
+                  "type": "String",
+                  "value": null,
+                  "direction": "Input"
+                },
+                {
+                  "name": "varrequestor",
+                  "type": "String",
+                  "value": null,
+                  "direction": "Input"
+                },
+                {
+                  "name": "varexecReason",
+                  "type": "String",
+                  "value": null,
+                  "direction": "Input"
+                },
+                {
+                  "name": "varisScheduled",
+                  "type": "String",
+                  "value": {
+                    "value": "@if(equals(pipeline().TriggerType, 'Manual'), 'N', 'Y')",
+                    "type": "Expression"
+                  },
+                  "direction": "Input"
+                },
+                {
+                  "name": "varloadName",
+                  "type": "String",
+                  "value": null,
+                  "direction": "Input"
+                }
+              ],
+              "type": "Query",
+              "text": {
+                "value": "DECLARE\t@return_value int\nEXEC\t@return_value = [ccams].[SP_GetNewDataSetRunId]\n\t\t@batchId = @varbatchId,\n\t\t@executionStartTime = @varexecutionStartTime,\n\t\t@recordCount = @varrecordCount,\n\t\t@executingUser = NULL,\n\t\t@requestor = NULL,\n\t\t@execReason = NULL,\n\t\t@isScheduled = @varisScheduled,\n\t\t@loadName = @varloadName\nSELECT\t'Return Value' = @return_value",
+                "type": "Expression"
+              }
+            }
+          ],
+          "scriptBlockExecutionTimeout": "02:00:00"
+        }
+      },
+      {
+        "name": "capturedatasetrunid",
+        "type": "SetVariable",
+        "dependsOn": [
+          {
+            "activity": "SP_GetNewDataSetRunId",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          }
+        ],
+        "policy": {
+          "secureOutput": false,
+          "secureInput": false
+        },
+        "userProperties": [],
+        "typeProperties": {
+          "variableName": "varDatasetRunId",
+          "value": {
+            "value": "@activity('SP_GetNewDataSetRunId').output['resultSets'][0]['rows'][0]['Return Value']",
+            "type": "Expression"
+          }
+        }
+      },
+      {
+        "name": "storunidcounts",
+        "type": "Script",
+        "dependsOn": [
+          {
+            "activity": "variableCOB",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          }
+        ],
+        "policy": {
+          "timeout": "0.12:00:00:00",
+          "retry": 0,
+          "retryIntervalInSeconds": 30,
+          "secureOutput": false,
+          "secureInput": false
+        },
+        "userProperties": [],
+        "linkedServiceName": {
+          "referenceName": "ls_tdr_db",
+          "type": "LinkedServiceReference",
+          "parameters": {
+            "tdr_servername": {
+              "value": "@pipeline().globalParameters.tdrServerName",
+              "type": "Expression"
+            },
+            "tdr_databasename": {
+              "value": "@pipeline().globalParameters.tdrDatabaseName",
+              "type": "Expression"
+            },
+            "service_principal_Id": {
+              "value": "@pipeline().globalParameters.ServicePrincipalID",
+              "type": "Expression"
+            },
+            "secret": "secret",
+            "subscription_id": {
+              "value": "@pipeline().globalParameters.SubscriptionID",
+              "type": "Expression"
+            },
+            "tenant_id": {
+              "value": "@pipeline().globalParameters.TenantID",
+              "type": "Expression"
+            },
+            "keyvault": {
+              "value": "@pipeline().globalParameters.ccamsKeyVault",
+              "type": "Expression"
+            }
+          }
+        },
+        "typeProperties": {
+          "scripts": [
+            {
+              "type": "Query",
+              "text": {
+                "value": "DECLARE\t@return_value int\nEXEC\t@return_value = [ccams].[sp_store_CrossProductManipulationRunid_Counts]\n\t\t@BatchId = @{variables('varCOB')},\n\t\t@CMFXTradesRunid = 'NULL',\n\t\t@NYBFXTradesRunid = 'NULL',\n\t\t@NYBSwapTradesRunid = 'NULL',\n\t\t@CMSwapTradesRunid = 'NULL',\n\t\t@runidcount = 4\nSELECT\t'Return Value' = @return_value",
+                "type": "Expression"
+              }
+            }
+          ],
+          "scriptBlockExecutionTimeout": "02:00:00"
+        }
+      },
+      {
+        "name": "SP_GetSruvRunId",
+        "type": "Script",
+        "dependsOn": [
+          {
+            "activity": "ThresholdSetText",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          }
+        ],
+        "policy": {
+          "timeout": "0.12:00:00",
+          "retry": 0,
+          "retryIntervalInSeconds": 30,
+          "secureOutput": false,
+          "secureInput": false
+        },
+        "userProperties": [],
+        "linkedServiceName": {
+          "referenceName": "ls_tdr_db",
+          "type": "LinkedServiceReference",
+          "parameters": {
+            "tdr_servername": {
+              "value": "@pipeline().globalParameters.tdrServerName",
+              "type": "Expression"
+            },
+            "tdr_databasename": {
+              "value": "@pipeline().globalParameters.tdrDatabaseName",
+              "type": "Expression"
+            },
+            "service_principal_Id": {
+              "value": "@pipeline().globalParameters.ServicePrincipalID",
+              "type": "Expression"
+            },
+            "secret": "secret",
+            "subscription_id": {
+              "value": "@pipeline().globalParameters.SubscriptionID",
+              "type": "Expression"
+            },
+            "tenant_id": {
+              "value": "@pipeline().globalParameters.TenantID",
+              "type": "Expression"
+            },
+            "keyvault": {
+              "value": "@pipeline().globalParameters.ccamsKeyVault",
+              "type": "Expression"
+            }
+          }
+        },
+        "typeProperties": {
+          "scripts": [
+            {
+              "parameters": [
+                {
+                  "name": "varDsRunId",
+                  "type": "Int32",
+                  "value": {
+                    "value": "@variables('varDatasetRunId')",
+                    "type": "Expression"
+                  },
+                  "direction": "Input"
+                },
+                {
+                  "name": "varsurveillanceName",
+                  "type": "String",
+                  "value": {
+                    "value": "@activity('Thresholdlookup').output.firstRow.Name",
+                    "type": "Expression"
+                  },
+                  "direction": "Input"
+                },
+                {
+                  "name": "varisScheduled",
+                  "type": "String",
+                  "value": {
+                    "value": "@if(equals(pipeline().TriggerType, 'Manual'), 'N', 'Y')",
+                    "type": "Expression"
+                  },
+                  "direction": "Input"
+                },
+                {
+                  "name": "varexecStartTime",
+                  "type": "Datetime",
+                  "value": {
+                    "value": "@formatDateTime(utcNow(), 'dd-MMM-yyyy hh:mm:ss tt')",
+                    "type": "Expression"
+                  },
+                  "direction": "Input"
+                },
+                {
+                  "name": "varthresholdtext",
+                  "type": "String",
+                  "value": {
+                    "value": "@variables('varThreshold')",
+                    "type": "Expression"
+                  },
+                  "direction": "Input"
+                },
+                {
+                  "name": "varrunOutputlocation",
+                  "type": "String",
+                  "value": null,
+                  "direction": "Input"
+                },
+                {
+                  "name": "varexecutor",
+                  "type": "String",
+                  "value": null,
+                  "direction": "Input"
+                },
+                {
+                  "name": "varrequestor",
+                  "type": "String",
+                  "value": null,
+                  "direction": "Input"
+                },
+                {
+                  "name": "varexecReason",
+                  "type": "String",
+                  "value": null,
+                  "direction": "Input"
+                },
+                {
+                  "name": "varexecutingUser",
+                  "type": "String",
+                  "value": null,
+                  "direction": "Input"
+                },
+                {
+                  "name": "varScenario_Id",
+                  "type": "Int32",
+                  "value": {
+                    "value": "@activity('Thresholdlookup').output.firstRow.Scenario_Id",
+                    "type": "Expression"
+                  },
+                  "direction": "Input"
+                }
+              ],
+              "type": "Query",
+              "text": {
+                "value": "DECLARE\t@return_value int\nEXEC\t@return_value = [ccams].[SP_GetNewSurveillanceRunId]\n\t\t@datasetRunId = @varDsRunId,\n\t\t@surveillanceName = @varsurveillanceName,\n\t\t@isScheduled = @varisScheduled,\n\t\t@execStartTime = @varexecStartTime,\n\t\t@thresholdtext = @varthresholdtext,\n\t\t@runOutputlocation = NULL,\n\t\t@executor = NULL,\n\t\t@execReason = NULL,\n\t\t@executingUser = NULL,\n\t\t@Scenario_Id = @varScenario_Id\nSELECT\t'Return Value' = @return_value",
+                "type": "Expression"
+              }
+            }
+          ],
+          "scriptBlockExecutionTimeout": "02:00:00"
+        }
+      },
+      {
+        "name": "survrunid",
+        "type": "SetVariable",
+        "dependsOn": [
+          {
+            "activity": "SP_GetSruvRunId",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          }
+        ],
+        "policy": {
+          "secureOutput": false,
+          "secureInput": false
+        },
+        "userProperties": [],
+        "typeProperties": {
+          "variableName": "varSurvRunId",
+          "value": {
+            "value": "@activity('SP_GetSruvRunId').output['resultSets'][0]['rows'][0]['Return Value']",
+            "type": "Expression"
+          }
+        }
+      },
+      {
+        "name": "CrossProductManipulationNotebook",
+        "type": "DatabricksNotebook",
+        "dependsOn": [
+          {
+            "activity": "survrunid",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          },
+          {
+            "activity": "storunidcounts",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          }
+        ],
+        "policy": {
+          "timeout": "0.12:00:00",
+          "retry": 0,
+          "retryIntervalInSeconds": 30,
+          "secureOutput": false,
+          "secureInput": false
+        },
+        "userProperties": [],
+        "typeProperties": {
+          "notebookPath": "/Shared/2B Cross Product Manipulation/2B Cross Product Model",
+          "baseParameters": {
+            "adf_input_survid": {
+              "value": "@string(variables('varSurvRunId'))",
+              "type": "Expression"
+            },
+            "adf_input_batchid": {
+              "value": "@string(variables('varCOB'))",
+              "type": "Expression"
+            },
+            "adf_input_ds_runid": {
+              "value": "@string(variables('varDatasetRunId'))",
+              "type": "Expression"
+            }
+          },
+          "linkedServiceName": {
+            "referenceName": "ls_ccams_databricks",
+            "type": "LinkedServiceReference",
+            "parameters": {
+              "subscription_id": {
+                "value": "@pipeline().globalParameters.SubscriptionID",
+                "type": "Expression"
+              },
+              "databricks_url": {
+                "value": "@pipeline().globalParameters.ccamsDatabricksWS",
+                "type": "Expression"
+              },
+              "workspace_resource_id": {
+                "value": "@pipeline().globalParameters.ccamsDatabricksWSResouceID",
+                "type": "Expression"
+              },
+              "cluster_id": {
+                "value": "@pipeline().globalParameters.ClusterID",
+                "type": "Expression"
+              }
+            }
+          }
+        }
+      },
+      {
+        "name": "SurvRunComplete",
+        "type": "Script",
+        "dependsOn": [
+          {
+            "activity": "CrossProductManipulationNotebook",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          }
+        ],
+        "policy": {
+          "timeout": "0.12:00:00",
+          "retry": 0,
+          "retryIntervalInSeconds": 30,
+          "secureOutput": false,
+          "secureInput": false
+        },
+        "userProperties": [],
+        "linkedServiceName": {
+          "referenceName": "ls_tdr_db",
+          "type": "LinkedServiceReference",
+          "parameters": {
+            "tdr_servername": {
+              "value": "@pipeline().globalParameters.tdrServerName",
+              "type": "Expression"
+            },
+            "tdr_databasename": {
+              "value": "@pipeline().globalParameters.tdrDatabaseName",
+              "type": "Expression"
+            },
+            "service_principal_Id": {
+              "value": "@pipeline().globalParameters.ServicePrincipalID",
+              "type": "Expression"
+            },
+            "secret": "secret",
+            "subscription_id": {
+              "value": "@pipeline().globalParameters.SubscriptionID",
+              "type": "Expression"
+            },
+            "tenant_id": {
+              "value": "@pipeline().globalParameters.TenantID",
+              "type": "Expression"
+            },
+            "keyvault": {
+              "value": "@pipeline().globalParameters.ccamsKeyVault",
+              "type": "Expression"
+            }
+          }
+        },
+        "typeProperties": {
+          "scripts": [
+            {
+              "parameters": [
+                {
+                  "name": "varsurveillanceRunId",
+                  "type": "Int16",
+                  "value": {
+                    "value": "@variables('varSurvRunId')",
+                    "type": "Expression"
+                  },
+                  "direction": "Input"
+                },
+                {
+                  "name": "varexetime",
+                  "type": "Datetime",
+                  "value": {
+                    "value": "@formatDateTime(utcNow(), 'dd-MMM-yyyy hh:mm:ss tt')",
+                    "type": "Expression"
+                  },
+                  "direction": "Input"
+                },
+                {
+                  "name": "varissuccess",
+                  "type": "String",
+                  "value": {
+                    "value": "@if(equals(activity('CrossProductManipulationNotebook').status, 'Succeeded'), 'Y', 'N')",
+                    "type": "Expression"
+                  },
+                  "direction": "Input"
+                }
+              ],
+              "type": "Query",
+              "text": {
+                "value": "DECLARE\t@return_value int\nEXEC\t@return_value = [ccams].[SP_CompleteSurveillanceRun]\n\t\t@surveillanceRunId = @varsurveillanceRunId,\n\t\t@execEndTime = @varexetime,\n\t\t@isSuccessful = 'Y',\n\t\t@runOutputText = NULL,\n\t\t@executingUser = NULL\nSELECT\t'Return_Value' = @return_value",
+                "type": "Expression"
+              }
+            }
+          ],
+          "scriptBlockExecutionTimeout": "02:00:00"
+        }
+      }
+    ],
+    "parameters": {},
+    "variables": {
+      "varCOB": {
+        "type": "String"
+      },
+      "varSurvRunId": {
+        "type": "String"
+      },
+      "varThreshold": {
+        "type": "String"
+      },
+      "varRecordCount": {
+        "type": "String"
+      },
+      "varDatasetRunId": {
+        "type": "String"
+      }
+    },
+    "folder": {
+      "name": "Cross Product Manipulation"
+    },
+    "annotations": []
+  }
+}
