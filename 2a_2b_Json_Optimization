@@ -4,30 +4,6 @@
     "description": "2B Cross Product Manipulation",
     "activities": [
       {
-        "name": "variableCOB",
-        "type": "SetVariable",
-        "dependsOn": [
-          {
-            "activity": "GetRunID",
-            "dependencyConditions": [
-              "Succeeded"
-            ]
-          }
-        ],
-        "policy": {
-          "secureOutput": false,
-          "secureInput": false
-        },
-        "userProperties": [],
-        "typeProperties": {
-          "variableName": "varCOB",
-          "value": {
-            "value": "@activity('GetRunID').output.resultSets[0].rows[0].BatchId",
-            "type": "Expression"
-          }
-        }
-      },
-      {
         "name": "GetRunID",
         "type": "Script",
         "dependsOn": [],
@@ -81,70 +57,11 @@
         }
       },
       {
-        "name": "Thresholdlookup",
-        "description": "",
-        "type": "Lookup",
-        "dependsOn": [
-          {
-            "activity": "capturedatasetrunid",
-            "dependencyConditions": [
-              "Succeeded"
-            ]
-          }
-        ],
-        "policy": {
-          "timeout": "0.12:00:00",
-          "retry": 0,
-          "retryIntervalInSeconds": 30,
-          "secureOutput": false,
-          "secureInput": false
-        },
-        "userProperties": [],
-        "typeProperties": {
-          "source": {
-            "type": "AzureSqlSource",
-            "sqlReaderQuery": "with func_lookup as (\nselect max(T.UpdatedOn) as UpdatedOn , T.ThresholdSetText as ThresholdSetText, S.Name as Name, T.Scenario_Id as Scenario_Id\nfrom [ccams].[Thresholdset] T\ninner join [ccams].[Surveillance] S\non S.SurveillanceId = T.Scenario_Id\nwhere S.SurveillanceId = 11\ngroup by T.UpdatedOn, T.ThresholdSetText, S.Name, T.Scenario_Id\n)\nselect top 1 max(UpdatedOn) as UpdatedOn, ThresholdSetText, Name, Scenario_Id\nfrom func_lookup\ngroup by ThresholdSetText, Name, Scenario_Id\norder by UpdatedOn desc\n",
-            "queryTimeout": "02:00:00",
-            "partitionOption": "None"
-          },
-          "dataset": {
-            "referenceName": "tdr_db_source",
-            "type": "DatasetReference",
-            "parameters": {
-              "server": {
-                "value": "@pipeline().globalParameters.tdrServerName",
-                "type": "Expression"
-              },
-              "database": {
-                "value": "@pipeline().globalParameters.tdrDatabaseName",
-                "type": "Expression"
-              },
-              "service_principal_Id": {
-                "value": "@pipeline().globalParameters.ServicePrincipalID",
-                "type": "Expression"
-              },
-              "subscription_id": {
-                "value": "@pipeline().globalParameters.SubscriptionID",
-                "type": "Expression"
-              },
-              "tenant_id": {
-                "value": "@pipeline().globalParameters.TenantID",
-                "type": "Expression"
-              },
-              "keyvault": {
-                "value": "@pipeline().globalParameters.ccamsKeyVault",
-                "type": "Expression"
-              }
-            }
-          }
-        }
-      },
-      {
-        "name": "ThresholdSetText",
+        "name": "variableCOB",
         "type": "SetVariable",
         "dependsOn": [
           {
-            "activity": "Thresholdlookup",
+            "activity": "GetRunID",
             "dependencyConditions": [
               "Succeeded"
             ]
@@ -156,9 +73,9 @@
         },
         "userProperties": [],
         "typeProperties": {
-          "variableName": "varThreshold",
+          "variableName": "varCOB",
           "value": {
-            "value": "@activity('Thresholdlookup').output.firstRow.ThresholdSetText",
+            "value": "@activity('GetRunID').output.resultSets[0].rows[0].BatchId",
             "type": "Expression"
           }
         }
@@ -166,7 +83,14 @@
       {
         "name": "recordcount",
         "type": "Script",
-        "dependsOn": [],
+        "dependsOn": [
+          {
+            "activity": "variableCOB",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          }
+        ],
         "policy": {
           "timeout": "0.12:00:00",
           "retry": 0,
@@ -404,66 +328,86 @@
         }
       },
       {
-        "name": "storunidcounts",
-        "type": "Script",
+        "name": "Thresholdlookup",
+        "description": "",
+        "type": "Lookup",
         "dependsOn": [
           {
-            "activity": "variableCOB",
+            "activity": "capturedatasetrunid",
             "dependencyConditions": [
               "Succeeded"
             ]
           }
         ],
         "policy": {
-          "timeout": "0.12:00:00:00",
+          "timeout": "0.12:00:00",
           "retry": 0,
           "retryIntervalInSeconds": 30,
           "secureOutput": false,
           "secureInput": false
         },
         "userProperties": [],
-        "linkedServiceName": {
-          "referenceName": "ls_tdr_db",
-          "type": "LinkedServiceReference",
-          "parameters": {
-            "tdr_servername": {
-              "value": "@pipeline().globalParameters.tdrServerName",
-              "type": "Expression"
-            },
-            "tdr_databasename": {
-              "value": "@pipeline().globalParameters.tdrDatabaseName",
-              "type": "Expression"
-            },
-            "service_principal_Id": {
-              "value": "@pipeline().globalParameters.ServicePrincipalID",
-              "type": "Expression"
-            },
-            "secret": "secret",
-            "subscription_id": {
-              "value": "@pipeline().globalParameters.SubscriptionID",
-              "type": "Expression"
-            },
-            "tenant_id": {
-              "value": "@pipeline().globalParameters.TenantID",
-              "type": "Expression"
-            },
-            "keyvault": {
-              "value": "@pipeline().globalParameters.ccamsKeyVault",
-              "type": "Expression"
-            }
-          }
-        },
         "typeProperties": {
-          "scripts": [
-            {
-              "type": "Query",
-              "text": {
-                "value": "DECLARE\t@return_value int\nEXEC\t@return_value = [ccams].[sp_store_CrossProductManipulationRunid_Counts]\n\t\t@BatchId = @{variables('varCOB')},\n\t\t@CMFXTradesRunid = 'NULL',\n\t\t@NYBFXTradesRunid = 'NULL',\n\t\t@NYBSwapTradesRunid = 'NULL',\n\t\t@CMSwapTradesRunid = 'NULL',\n\t\t@runidcount = 4\nSELECT\t'Return Value' = @return_value",
+          "source": {
+            "type": "AzureSqlSource",
+            "sqlReaderQuery": "with func_lookup as (\nselect max(T.UpdatedOn) as UpdatedOn , T.ThresholdSetText as ThresholdSetText, S.Name as Name, T.Scenario_Id as Scenario_Id\nfrom [ccams].[Thresholdset] T\ninner join [ccams].[Surveillance] S\non S.SurveillanceId = T.Scenario_Id\nwhere S.SurveillanceId = 11\ngroup by T.UpdatedOn, T.ThresholdSetText, S.Name, T.Scenario_Id\n)\nselect top 1 max(UpdatedOn) as UpdatedOn, ThresholdSetText, Name, Scenario_Id\nfrom func_lookup\ngroup by ThresholdSetText, Name, Scenario_Id\norder by UpdatedOn desc\n",
+            "queryTimeout": "02:00:00",
+            "partitionOption": "None"
+          },
+          "dataset": {
+            "referenceName": "tdr_db_source",
+            "type": "DatasetReference",
+            "parameters": {
+              "server": {
+                "value": "@pipeline().globalParameters.tdrServerName",
+                "type": "Expression"
+              },
+              "database": {
+                "value": "@pipeline().globalParameters.tdrDatabaseName",
+                "type": "Expression"
+              },
+              "service_principal_Id": {
+                "value": "@pipeline().globalParameters.ServicePrincipalID",
+                "type": "Expression"
+              },
+              "subscription_id": {
+                "value": "@pipeline().globalParameters.SubscriptionID",
+                "type": "Expression"
+              },
+              "tenant_id": {
+                "value": "@pipeline().globalParameters.TenantID",
+                "type": "Expression"
+              },
+              "keyvault": {
+                "value": "@pipeline().globalParameters.ccamsKeyVault",
                 "type": "Expression"
               }
             }
-          ],
-          "scriptBlockExecutionTimeout": "02:00:00"
+          }
+        }
+      },
+      {
+        "name": "ThresholdSetText",
+        "type": "SetVariable",
+        "dependsOn": [
+          {
+            "activity": "Thresholdlookup",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          }
+        ],
+        "policy": {
+          "secureOutput": false,
+          "secureInput": false
+        },
+        "userProperties": [],
+        "typeProperties": {
+          "variableName": "varThreshold",
+          "value": {
+            "value": "@activity('Thresholdlookup').output.firstRow.ThresholdSetText",
+            "type": "Expression"
+          }
         }
       },
       {
@@ -645,12 +589,6 @@
         "dependsOn": [
           {
             "activity": "survrunid",
-            "dependencyConditions": [
-              "Succeeded"
-            ]
-          },
-          {
-            "activity": "storunidcounts",
             "dependencyConditions": [
               "Succeeded"
             ]
