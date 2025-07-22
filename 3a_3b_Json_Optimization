@@ -285,20 +285,11 @@
                     "type": "Expression"
                   },
                   "direction": "Input"
-                },
-                {
-                  "name": "varloadName",
-                  "type": "String",
-                  "value": {
-                    "value": "CM FX Trades",
-                    "type": "Expression"
-                  },
-                  "direction": "Input"
                 }
               ],
               "type": "Query",
               "text": {
-                "value": "DECLARE @return_value int\nEXEC @return_value = [ccams].[SP_GetNewDataSetRunId]\n    @batchId = @varbatchId,\n    @executionStartTime = @varexecutionStartTime,\n    @recordCount = @varrecordCount,\n    @executingUser = @varexecutingUser,\n    @requestor = @varrequestor,\n    @execReason = @varexecReason,\n    @isScheduled = @varisScheduled,\n    @loadName = @varloadName\nSELECT 'Return Value' = @return_value",
+                "value": "DECLARE @return_value int\nEXEC @return_value = [ccams].[SP_GetNewDataSetRunId]\n    @batchId = @varbatchId,\n    @executionStartTime = @varexecutionStartTime,\n    @recordCount = @varrecordCount,\n    @executingUser = @varexecutingUser,\n    @requestor = @varrequestor,\n    @execReason = @varexecReason,\n    @isScheduled = @varisScheduled\nSELECT 'Return Value' = @return_value",
                 "type": "Expression"
               }
             }
