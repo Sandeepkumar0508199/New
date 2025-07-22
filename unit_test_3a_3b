@@ -1,0 +1,376 @@
+# Databricks notebook source
+# Unit Tests for 2B Cross Product Manipulation Pattern
+
+import pandas as pd
+import datetime
+from pytz import timezone
+from pyspark.sql import functions as F
+from pyspark.sql.types import StructType, StructField, StringType, IntegerType
+
+# COMMAND ----------
+
+# Define Cross Product KDEs (Key Data Elements)
+CROSS_PRODUCT_KDES = [
+    'BatchID',
+    'ClOrdID',
+    'Symbol', 
+    'TransactTime',
+    'TraderID',
+    'ClientID',
+    'Side',
+    'Currency1',
+    'Currency2',
+    'Quantity',
+    'OrderCapacity',
+    'SecurityName',
+    'MaturityMonthYear'
+]
+
+# COMMAND ----------
+
+# Collect Test Results
+test_results = []
+failed_tests = []
+surveillance_map = {
+    "11": "Cross Product Manipulation FX Pattern"
+}
+
+# COMMAND ----------
+
+# Fetch the value from adf trigger
+input_survid = dbutils.widgets.get("adf_input_survid")
+input_surveillanceId = dbutils.widgets.get("adf_input_surveillanceId")
+input_batchid = dbutils.widgets.get("adf_input_batchid")
+
+print(input_batchid)
+print(input_surveillanceId)
+
+try:
+    assert input_batchid and input_surveillanceId, "BatchID/SurveillanceId Missing"
+    print(f"Test Passed: Valid BatchID {input_batchid} and SurveillanceId {input_surveillanceId} exists for processing Cross Product Manipulation Pattern")
+    test_results.append({
+        "RuleId": 1,
+        "Status": "Pass",
+        "Message": f"Valid BatchID {input_batchid} and SurveillanceId {input_surveillanceId} exists for processing {surveillance_map[input_surveillanceId]}"
+    })
+except AssertionError as e:
+    test_results.append({
+        "RuleId": 1,
+        "Status": "Fail",
+        "Message": str(e)
+    })
+
+# COMMAND ----------
+
+# Database connection
+sql_server_tdr = 'sql-tdr-qa-use2'
+database_name_tdr = 'sqldb-tdr-qa-use2'
+test_sp_name_tdr = dbutils.secrets.get("ccams-scope", "ccams-app-reg-id")
+test_sp_pwd_tdr = dbutils.secrets.get("ccams-scope", "ccams-app-reg-sec")
+
+sql_server_fqdn_tdr = f"jdbc:sqlserver://{sql_server_tdr}.database.windows.net:1433"
+jdbc_parms_tdr = \
+(
+"encrypt=true;",
+"trustServerCertificate=true;",
+"hostNameInCertificate=*.database.windows.net;",
+"loginTimeout=30;",
+"driver=com.microsoft.sqlserver.jdbc.SQLServerDriver;",
+"authentication=ActiveDirectoryServicePrincipal"
+)
+
+connection_string_tdr = f"jdbc:sqlserver://{sql_server_fqdn_tdr};database={database_name_tdr};user={test_sp_name_tdr};password={test_sp_pwd_tdr};{jdbc_parms_tdr}"
+
+# COMMAND ----------
+
+# Read in Threshold data
+threshold_df = (spark.read
+                .format("jdbc")
+                .option("url", connection_string_tdr)
+                .option("query", f"SELECT TOP(1) TS.ThresholdSetText from ccams.ThresholdSet as TS WHERE TS.Scenario_Id = {input_surveillanceId} ORDER BY TS.UpdatedOn DESC")
+                .load()
+                .toPandas())
+
+# Read DenodoForeignExchangeView input table from TDR
+fx_input_df = (spark.read
+                .format("jdbc")
+                .option("url", connection_string_tdr)
+                .option("query", f"SELECT * FROM dbo.rel_DenodoForeignExchangeView where BatchID = {input_batchid}")
+                .load()
+                .toPandas())
+
+# Read DenodoSwapView input table from TDR  
+swap_input_df = (spark.read
+                .format("jdbc")
+                .option("url", connection_string_tdr)
+                .option("query", f"SELECT * FROM dbo.rel_DenodoSwapView where BatchID = {input_batchid}")
+                .load()
+                .toPandas())
+
+# Read ProductList reference table
+product_list_df = (spark.read
+                .format("jdbc")
+                .option("url", connection_string_tdr)
+                .option("dbtable", "[dbo].[vw_ProductList]")
+                .load()
+                .toPandas())
+
+# COMMAND ----------
+
+# Check if Threshold data exists
+try:
+    assert threshold_df is not None, f"Threshold data is not available for {surveillance_map[input_surveillanceId]}"
+    assert not threshold_df.empty, f"Threshold data is empty for {surveillance_map[input_surveillanceId]}"
+    print(f"Test passed: Threshold data exists for {surveillance_map[input_surveillanceId]}")
+    display(threshold_df.head())
+    test_results.append({
+        "RuleId": 2,
+        "Status": "Pass",
+        "Message": f"Threshold data exists for {surveillance_map[input_surveillanceId]}"
+    })
+except AssertionError as e:
+    test_results.append({
+        "RuleId": 2,
+        "Status": "Fail",
+        "Message": str(e)
+    })
+
+# COMMAND ----------
+
+# Check if Threshold attributes exist
+if threshold_df is not None:
+    try:
+        required_cross_product_thresholds = [
+            'derivativeQuantityThreshold_spotOptions',
+            'lookbackTimeThreshold_spotOptions', 
+            'underlyingQuantityThreshold_spotOptions',
+            'minQualifiedTradesThreshold_spotOptions',
+            'derivativeQuantityThreshold_spotForwards',
+            'lookbackTimeThreshold_spotForwards',
+            'underlyingQuantityThreshold_spotForwards',
+            'minQualifiedTradesThreshold_spotForwards',
+            'derivativeQuantityThreshold_forwardsOptions',
+            'lookbackTimeThreshold_forwardsOptions',
+            'underlyingQuantityThreshold_forwardsOptions',
+            'minQualifiedTradesThreshold_forwardsOptions',
+            'derivativeQuantityThreshold_spotSwap',
+            'lookbackTimeThreshold_spotSwap',
+            'underlyingQuantityThreshold_spotSwap',
+            'minQualifiedTradesThreshold_spotSwap'
+        ]
+
+        cross_product_thresholds_text = threshold_df.iloc[0]['ThresholdSetText']
+        cross_product_thresholds_items = [item.strip() for item in cross_product_thresholds_text.split(';') if '=' in item]
+
+        cross_product_thresholds_dict = {}
+        for item in cross_product_thresholds_items:
+            name, value = item.split('=', 1)
+            cross_product_thresholds_dict[name.strip()] = value.strip()
+
+        missing_cross_product_thresholds = [key for key in required_cross_product_thresholds if key not in cross_product_thresholds_dict]
+
+        assert not missing_cross_product_thresholds, f"Missing Threshold attributes required for {surveillance_map[input_surveillanceId]}: {missing_cross_product_thresholds}"
+        print(f"Test passed: All Threshold attributes required for {surveillance_map[input_surveillanceId]} exists")
+        test_results.append({
+            "RuleId": 3,
+            "Status": "Pass",
+            "Message": f"All Threshold attributes required for {surveillance_map[input_surveillanceId]} exists"
+        })
+    except AssertionError as e:
+        test_results.append({
+            "RuleId": 3,
+            "Status": "Fail",
+            "Message": str(e)
+        })
+
+# COMMAND ----------
+
+# Check if DenodoForeignExchangeView data exists
+try:
+    assert fx_input_df is not None, "DenodoForeignExchangeView data is not available"
+    assert not fx_input_df.empty, "DenodoForeignExchangeView dataset is empty"
+    test_results.append({
+        "RuleId": 4,
+        "Status": "Pass",
+        "Message": "DenodoForeignExchangeView data exists"
+    })
+except AssertionError as e:
+    test_results.append({
+        "RuleId": 4,
+        "Status": "Fail",
+        "Message": str(e)
+    })
+
+# COMMAND ----------
+
+# Check if DenodoSwapView data exists
+try:
+    assert swap_input_df is not None, "DenodoSwapView data is not available"
+    assert not swap_input_df.empty, "DenodoSwapView dataset is empty"
+    test_results.append({
+        "RuleId": 5,
+        "Status": "Pass", 
+        "Message": "DenodoSwapView data exists"
+    })
+except AssertionError as e:
+    test_results.append({
+        "RuleId": 5,
+        "Status": "Fail",
+        "Message": str(e)
+    })
+
+# COMMAND ----------
+
+# Check if ProductList reference data exists
+try:
+    assert product_list_df is not None, "ProductList reference data is not available"
+    assert not product_list_df.empty, "ProductList reference dataset is empty"
+    test_results.append({
+        "RuleId": 6,
+        "Status": "Pass",
+        "Message": "ProductList reference data exists"
+    })
+except AssertionError as e:
+    test_results.append({
+        "RuleId": 6,
+        "Status": "Fail",
+        "Message": str(e)
+    })
+
+# COMMAND ----------
+
+# Validate required KDEs for DenodoForeignExchangeView
+missing_fx_cols = []
+if fx_input_df is not None and not fx_input_df.empty:
+    try:
+        for col in CROSS_PRODUCT_KDES:
+            print(f"Processing FX column: {col}")
+            if col not in fx_input_df.columns.tolist():
+                missing_fx_cols.append(col)
+        assert not missing_fx_cols, f"Missing KDEs {missing_fx_cols} in DenodoForeignExchangeView Data for {surveillance_map[input_surveillanceId]}"
+        print(f"Test Passed: All KDEs for {surveillance_map[input_surveillanceId]} are present in DenodoForeignExchangeView Data")
+        test_results.append({
+            "RuleId": 7,
+            "Status": "Pass",
+            "Message": f"All KDEs required for {surveillance_map[input_surveillanceId]} are present in DenodoForeignExchangeView Data"
+        })
+    except AssertionError as e:
+        test_results.append({
+            "RuleId": 7,
+            "Status": "Fail",
+            "Message": str(e)
+        })
+
+# COMMAND ----------
+
+# Validate required KDEs for DenodoSwapView
+missing_swap_cols = []
+if swap_input_df is not None and not swap_input_df.empty:
+    try:
+        for col in CROSS_PRODUCT_KDES:
+            print(f"Processing SWAP column: {col}")
+            if col not in swap_input_df.columns.tolist():
+                missing_swap_cols.append(col)
+        assert not missing_swap_cols, f"Missing KDEs {missing_swap_cols} in DenodoSwapView Data for {surveillance_map[input_surveillanceId]}"
+        print(f"Test Passed: All KDEs for {surveillance_map[input_surveillanceId]} are present in DenodoSwapView Data")
+        test_results.append({
+            "RuleId": 8,
+            "Status": "Pass",
+            "Message": f"All KDEs required for {surveillance_map[input_surveillanceId]} are present in DenodoSwapView Data"
+        })
+    except AssertionError as e:
+        test_results.append({
+            "RuleId": 8,
+            "Status": "Fail",
+            "Message": str(e)
+        })
+
+# COMMAND ----------
+
+# Check if FX KDE has valid data (No Null/Blank)
+unused_cols = ['OrderCapacity', 'MaturityMonthYear']
+null_blank_fx_cols = []
+if fx_input_df is not None and not fx_input_df.empty:
+    try:
+        for col in CROSS_PRODUCT_KDES:
+            # Below check excludes KDEs not used in all patterns and excludes null check on missing columns from Above Case
+            if col not in missing_fx_cols and col not in unused_cols:
+                print(f"Processing FX column: {col}")
+                if fx_input_df[col].isnull().any():
+                    null_blank_fx_cols.append(col)
+                elif fx_input_df[col].apply(lambda x: isinstance(x, str) and x.strip() == '').any(): # Check for BLANK
+                    null_blank_fx_cols.append(col)
+        null_blank_fx_cols = list(set(null_blank_fx_cols))
+        assert not null_blank_fx_cols, f"KDEs {null_blank_fx_cols} contains null/blank values in DenodoForeignExchangeView Data"
+        print("Test Passed: No null values exists in any of the required KDEs in FX data")
+        test_results.append({
+            "RuleId": 9,
+            "Status": "Pass",
+            "Message": "No null/blank values exists in any of the required KDEs in DenodoForeignExchangeView Data"
+        })
+    except AssertionError as e:
+        test_results.append({
+            "RuleId": 9,
+            "Status": "Fail",
+            "Message": str(e)
+        })
+
+# COMMAND ----------
+
+# Check if SWAP KDE has valid data (No Null/Blank)
+null_blank_swap_cols = []
+if swap_input_df is not None and not swap_input_df.empty:
+    try:
+        for col in CROSS_PRODUCT_KDES:
+            # Below check excludes KDEs not used in all patterns and excludes null check on missing columns from Above Case
+            if col not in missing_swap_cols and col not in unused_cols:
+                print(f"Processing SWAP column: {col}")
+                if swap_input_df[col].isnull().any():
+                    null_blank_swap_cols.append(col)
+                elif swap_input_df[col].apply(lambda x: isinstance(x, str) and x.strip() == '').any(): # Check for BLANK
+                    null_blank_swap_cols.append(col)
+        null_blank_swap_cols = list(set(null_blank_swap_cols))
+        assert not null_blank_swap_cols, f"KDEs {null_blank_swap_cols} contains null/blank values in DenodoSwapView Data"
+        print("Test Passed: No null values exists in any of the required KDEs in SWAP data")
+        test_results.append({
+            "RuleId": 10,
+            "Status": "Pass",
+            "Message": "No null/blank values exists in any of the required KDEs in DenodoSwapView Data"
+        })
+    except AssertionError as e:
+        test_results.append({
+            "RuleId": 10,
+            "Status": "Fail",
+            "Message": str(e)
+        })
+
+# COMMAND ----------
+
+# Create Results Df and write to DB
+results_df = spark.createDataFrame([
+    {
+        "BatchID": input_batchid,
+        "SurveillanceID": input_surveillanceId,
+        "SurveillanceRunID": input_survid,
+        "RuleId": result["RuleId"],
+        "Status": result["Status"],
+        "Message": result["Message"],
+        "timestamp": datetime.datetime.now(timezone('US/Eastern')).strftime('%Y-%m-%d %H:%M:%S.%f')[:-3],
+        "Updated_by": "TEST_RUN"
+    }
+    for result in test_results
+])
+
+results_df.write.format("jdbc").mode("append").option("url", connection_string_tdr).option("dbtable", "ccams.DQInputCheckResult").save()
+
+# COMMAND ----------
+
+# Check for failed tests
+failed_tests = results_df.filter(F.col("Status") == "Fail").select("Message").collect()
+if failed_tests:
+    failed_messages = [result.Message for result in failed_tests]
+    error_message = "\n--- Failed Tests ---\n" + "\n".join(failed_messages)
+    print(error_message)
+    raise AssertionError(error_message)
+else:
+    print("All Data Validation Tests passed successfully")
