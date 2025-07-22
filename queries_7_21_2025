@@ -1,0 +1,57 @@
+[dbo].[TDRLoadstatusView]
+DenodoForeignExchangeView, DenodoSwapView
+[ccams].[DatasetRun]
+[ccams].[Thresholdset], [ccams].[Surveillance]
+
+[dbo].[rel_DenodoForeignExchangeView]
+[dbo].[rel_DenodoSwapView]
+ccams.ThresholdSet 
+[dbo].[vw_ProductList] 
+ccams.AlertDetail 
+ccams.AlertLink
+ccams.AlertTransactionLink
+
+
+
+
+-- Get complete execution details for a specific date
+SELECT 
+    SR.SurveillanceRunId,           -- 4335 (Our fraud detection session)
+    SR.DatasetRunId,                -- 4008 (Links to data processing session)
+    SR.SurveillanceId,              -- 11 (Cross Product Manipulation scenario)
+    SR.SurveillanceName,            -- 'CROSS PRODUCT MANIPULATION'
+    SR.ExecutionStartTime,          -- '2025-07-11 16:26:20'
+    SR.ThresholdText,               -- 'derivativeQuantityThreshold_spotOptions=1000000;...'
+    SR.IsScheduled,                 -- 'N' (Manual execution)
+    SR.Status,                      -- 'Running' or 'Completed'
+    
+    -- Linked DatasetRun details (Steps 7-8):
+    DR.BatchId,                     -- 20250709 (July 9, 2025 business date)
+    DR.RecordCount,                 -- 630 (Trading records processed)
+    DR.LoadName,                    -- 'CM FX Trades'
+    DR.ExecutionStartTime as DataProcessingStart  -- '2025-07-11 16:25:30'
+
+FROM [ccams].[SurveillanceRun] SR
+INNER JOIN [ccams].[DatasetRun] DR 
+    ON SR.DatasetRunId = DR.DatasetRunId
+WHERE CAST(SR.ExecutionStartTime AS DATE) = '2025-07-11'
+ORDER BY SR.ExecutionStartTime DESC
+
+
+
+-- To trace alert back to source data:
+SELECT 
+    ad.AlertID,
+    ad.AccountID,
+    ad.ShortAlertDescription,
+    sr.SurveillanceRunId,
+    sr.SurveillanceName,
+    dr.DatasetRunId,
+    dr.BatchId,
+    dr.RecordCount
+FROM ccams.AlertDetail ad
+JOIN ccams.AlertLink al ON ad.AlertID = al.AlertID
+JOIN ccams.SurveillanceRun sr ON al.SurveillanceRunId = sr.SurveillanceRunId
+JOIN ccams.DatasetRun dr ON sr.DatasetRunId = dr.DatasetRunId
+WHERE ad.AlertID = 12345
+
