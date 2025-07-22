@@ -50,7 +50,7 @@
           "scripts": [
             {
               "type": "Query",
-              "text": "select BatchId, LoadName, Asset,Runid,UniqueIdentifier from (\nselect LoadName,batchId,Asset,Uniqueidentifier ,ROW_NUMBER() over (partition by batchid order by LoadName )\nnor from [dbo].[TDRLoadstatusView]\nwhere BatchId=(select min(batchid) from [dbo].[TDRLoadstatusView] where LoadStatus='Succeeded')\nand LoadName in ('CM FX Trades', 'NYB FX Trades', 'NYB Swap Trades', 'CM Swap Trades')\nand LoadStatus='Succeeded'\n--order by BatchId\n\n) a where nbr=1\n--order by BatchId"
+              "text": "select BatchId, LoadName, Asset,Runid,UniqueIdentifier from (\nselect LoadName,batchId,Asset,Uniqueidentifier ,ROW_NUMBER() over (partition by batchid order by LoadName )\nnbr from [dbo].[TDRLoadstatusView]\nwhere BatchId=(select min(batchid) from [dbo].[TDRLoadstatusView] where LoadStatus='Succeeded')\nand LoadName in ('CM FX Trades', 'NYB FX Trades', 'NYB Swap Trades', 'CM Swap Trades')\nand LoadStatus='Succeeded'\n) a where nbr=1"
             }
           ],
           "scriptBlockExecutionTimeout": "02:00:00"
@@ -289,13 +289,16 @@
                 {
                   "name": "varloadName",
                   "type": "String",
-                  "value": null,
+                  "value": {
+                    "value": "CM FX Trades",
+                    "type": "Expression"
+                  },
                   "direction": "Input"
                 }
               ],
               "type": "Query",
               "text": {
-                "value": "DECLARE\t@return_value int\nEXEC\t@return_value = [ccams].[SP_GetNewDataSetRunId]\n\t\t@batchId = @varbatchId,\n\t\t@executionStartTime = @varexecutionStartTime,\n\t\t@recordCount = @varrecordCount,\n\t\t@executingUser = NULL,\n\t\t@requestor = NULL,\n\t\t@execReason = NULL,\n\t\t@isScheduled = @varisScheduled,\n\t\t@loadName = @varloadName\nSELECT\t'Return Value' = @return_value",
+                "value": "DECLARE @return_value int\nEXEC @return_value = [ccams].[SP_GetNewDataSetRunId]\n    @batchId = @varbatchId,\n    @executionStartTime = @varexecutionStartTime,\n    @recordCount = @varrecordCount,\n    @executingUser = @varexecutingUser,\n    @requestor = @varrequestor,\n    @execReason = @varexecReason,\n    @isScheduled = @varisScheduled,\n    @loadName = @varloadName\nSELECT 'Return Value' = @return_value",
                 "type": "Expression"
               }
             }
@@ -551,7 +554,7 @@
               ],
               "type": "Query",
               "text": {
-                "value": "DECLARE\t@return_value int\nEXEC\t@return_value = [ccams].[SP_GetNewSurveillanceRunId]\n\t\t@datasetRunId = @varDsRunId,\n\t\t@surveillanceName = @varsurveillanceName,\n\t\t@isScheduled = @varisScheduled,\n\t\t@execStartTime = @varexecStartTime,\n\t\t@thresholdtext = @varthresholdtext,\n\t\t@runOutputlocation = NULL,\n\t\t@executor = NULL,\n\t\t@execReason = NULL,\n\t\t@executingUser = NULL,\n\t\t@Scenario_Id = @varScenario_Id\nSELECT\t'Return Value' = @return_value",
+                "value": "DECLARE @return_value int\nEXEC @return_value = [ccams].[SP_GetNewSurveillanceRunId]\n    @datasetRunId = @varDsRunId,\n    @surveillanceName = @varsurveillanceName,\n    @isScheduled = @varisScheduled,\n    @execStartTime = @varexecStartTime,\n    @thresholdtext = @varthresholdtext,\n    @runOutputlocation = @varrunOutputlocation,\n    @executor = @varexecutor,\n    @execReason = @varexecReason,\n    @executingUser = @varexecutingUser,\n    @Scenario_Id = @varScenario_Id\nSELECT 'Return Value' = @return_value",
                 "type": "Expression"
               }
             }
@@ -584,11 +587,67 @@
         }
       },
       {
-        "name": "CrossProductManipulationNotebook",
+        "name": "Unit test",
         "type": "DatabricksNotebook",
         "dependsOn": [
           {
             "activity": "survrunid",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          }
+        ],
+        "policy": {
+          "timeout": "0.12:00:00",
+          "retry": 0,
+          "retryIntervalInSeconds": 30,
+          "secureOutput": false,
+          "secureInput": false
+        },
+        "userProperties": [],
+        "typeProperties": {
+          "notebookPath": "/Shared/Data Validation Unit Tests/2B Patterns/unit_tests_cross_product",
+          "baseParameters": {
+            "adf_input_survid": {
+              "value": "@string(variables('varSurvRunId'))",
+              "type": "Expression"
+            },
+            "adf_input_surveillanceId": "11",
+            "adf_input_batchid": {
+              "value": "@string(variables('varCOB'))",
+              "type": "Expression"
+            }
+          },
+          "linkedServiceName": {
+            "referenceName": "ls_ccams_databricks",
+            "type": "LinkedServiceReference",
+            "parameters": {
+              "subscription_id": {
+                "value": "@pipeline().globalParameters.SubscriptionID",
+                "type": "Expression"
+              },
+              "databricks_url": {
+                "value": "@pipeline().globalParameters.ccamsDatabricksWS",
+                "type": "Expression"
+              },
+              "workspace_resource_id": {
+                "value": "@pipeline().globalParameters.ccamsDatabricksWSResouceID",
+                "type": "Expression"
+              },
+              "cluster_id": {
+                "value": "@pipeline().globalParameters.ClusterID",
+                "type": "Expression"
+              }
+            }
+          }
+        }
+      },
+      {
+        "name": "CrossProductManipulationNotebook",
+        "type": "DatabricksNotebook",
+        "dependsOn": [
+          {
+            "activity": "Unit test",
             "dependencyConditions": [
               "Succeeded"
             ]
@@ -726,7 +785,7 @@
               ],
               "type": "Query",
               "text": {
-                "value": "DECLARE\t@return_value int\nEXEC\t@return_value = [ccams].[SP_CompleteSurveillanceRun]\n\t\t@surveillanceRunId = @varsurveillanceRunId,\n\t\t@execEndTime = @varexetime,\n\t\t@isSuccessful = 'Y',\n\t\t@runOutputText = NULL,\n\t\t@executingUser = NULL\nSELECT\t'Return_Value' = @return_value",
+                "value": "DECLARE @return_value int\nEXEC @return_value = [ccams].[SP_CompleteSurveillanceRun]\n    @surveillanceRunId = @varsurveillanceRunId,\n    @execEndTime = @varexetime,\n    @isSuccessful = @varissuccess,\n    @runOutputText = NULL,\n    @executingUser = NULL\nSELECT 'Return_Value' = @return_value",
                 "type": "Expression"
               }
             }
