@@ -1,0 +1,45 @@
+REUSING FROM 2A2B INFRASTRUCTURE
+1. Database Connections (SQL Server, Databricks)
+
+sql-tdr-qa-use2 server connection
+sqldb-tdr-qa-use2 database
+Databricks workspace and cluster
+Service principal authentication
+Key Vault secret management
+JDBC connection parameters
+
+2. Core Data Tables (FX/Swap Views, Thresholds)
+
+TDRLoadstatusView
+DenodoForeignExchangeView
+DenodoSwapView
+ccams.ThresholdSet
+ccams.Surveillance
+vw_ProductList
+
+3. Essential Stored Procedures
+
+SP_GetNewDataSetRunId
+SP_GetNewSurveillanceRunId
+SP_CompleteSurveillanceRun
+sp_store_CrossProductManipulationRunid_Counts
+sp_PerformDQCheck
+
+4. Fraud Detection Business Logic
+
+Cross product analysis functions
+Threshold processing logic
+Time window analysis
+Quantity filtering rules
+Currency pair matching
+Trader identification logic
+
+5. Alert Generation Framework
+
+Alert structure
+AlertDetail table insertion
+AlertLink table connections
+AlertTransactionLink table
+Complete audit trail
+Timezone management
+RetryClaude can make mistakes. Please double-check responses.
