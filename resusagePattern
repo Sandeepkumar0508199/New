@@ -1,40 +1,14 @@
-CONFIGURATION PART 
-Database Infrastructure
-  sql-tdr-qa-use2 server connection
-  sqldb-tdr-qa-use2 database
-  Service principal authentication
-  Key Vault secret management
-  JDBC connection parameters
-
-Metadata Tables
-  ccams.ThresholdSet
-  ccams.Surveillance
-  vw_ProductList
-
-Stored Procedures
-  SP_GetNewDataSetRunId
-  SP_GetNewSurveillanceRunId
-  SP_CompleteSurveillanceRun
-  sp_store_CrossProductManipulationRunid_Counts
-  sp_PerformDQCheck
+CONFIGURATION PART (ONE-TIME REUSE FROM 2A2B)
+  Create DB connection
+  Update Surveillance tables
+  Setup stored procedures
+  Configure authentication
+  Deploy metadata configuration
 
 ADF PIPELINE TASKS (FOR EVERY PHASE)
-  Data Processing Tables
-
-TDRLoadstatusView
-  DenodoForeignExchangeView
-  DenodoSwapView
-
-ADF Activities to Keep
-  GetRunID
-  variableCOB
-  recordcount
-  varRecordCount
-  SP_GetNewDataSetRunId
-  capturedatasetrunid
-  Thresholdlookup
-  ThresholdSetText
-  SP_GetSruvRunId
-  survrunid
-  CrossProductManipulationNotebook
-  SurvRunComplete
+  Setup ADF Pipelines
+  Integrate with Databricks
+  Configure pipeline optimization
+  Remove unnecessary components
+  Test and validate
+  Deploy to production
