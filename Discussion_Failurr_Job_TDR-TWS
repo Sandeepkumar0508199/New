@@ -1,0 +1,10 @@
+Hi Sunita,
+
+Today we had a healthy discussion with Muthu, Venkat, and Nutan regarding the TWS integration challenges. We concluded that we need to forcefully fail the EBS job tomorrow to validate our system's failure handling and dependency behavior.
+Could you please assist in executing this controlled failure test? This will help us understand how TDR Analytics responds when EBS fails and ensure the TWS retry mechanisms work properly.
+This testing would help before moving it to production 
+
+Please let me know if you need any info .
+
+Thanks for your support and time 
+
