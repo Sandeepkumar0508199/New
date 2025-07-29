@@ -8,3 +8,11 @@ Please let me know if you need any info .
 
 Thanks for your support and time 
 
+
+Hi [TWS contact],
+
+The EBS job has failed as expected. Could you please rerun the EBS job in non-prod now?
+We are validating if the dependent analytics job triggers automatically after the rerun.
+
+Thanks!
+
