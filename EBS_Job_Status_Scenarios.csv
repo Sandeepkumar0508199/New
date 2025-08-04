@@ -1,0 +1,8 @@
+EBS JOB Status,TDRLoadStatusView,Output when triggered from TDR through PL_Notify_CCAMS,Outcome when triggered from TWS
+"FIRST RUN: File received on time, and EBS Data is Loaded Successfully  to OutboundView",Success,Success,
+"FIRST RUN:File received on time, and Data load/Job has failed",Failed,,
+FIRST RUN: File Delay - The job marked Completed,No File,,
+"RERUN: File received on time, and EBS Data load was failed and TDR fixed it and They Rerun and its success -
+This depends on when the Rerun has happened. Is it taking long time, and has passed 1-2 hours. So should we consider a time base triggered e.g. Trigger analytics at 10.30 am. And handle the Rerun on Spoofing FX separately when EBS issue is fixed.",Success,Success,
+"RERUN: File was delayed, and later when they receive the file they Rerun the job and its success -
+This depends on when the Rerun has happened. Is it taking long time, and has passed 1-2 hours. So should we consider a time base triggered e.g. Trigger analytics at 10.30 am. And handle the Rerun on Spoofing FX separately when EBS issue is fixed.",,,
