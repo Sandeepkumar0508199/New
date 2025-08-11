@@ -1,0 +1,123 @@
+{
+  "name": "Test_THROW_Pipeline",
+  "properties": {
+    "description": "Pipeline that checks if required data loads are available and sends notifications on failure",
+    "variables": {
+      "LoadCount": {
+        "type": "String",
+        "defaultValue": "3"
+      },
+      "ExpectedCount": {
+        "type": "String",
+        "defaultValue": "4"
+      }
+    },
+    "activities": [
+      {
+        "name": "Check_Load_Count",
+        "type": "IfCondition",
+        "dependsOn": [],
+        "typeProperties": {
+          "expression": {
+            "value": "@greaterOrEquals(int(variables('LoadCount')), int(variables('ExpectedCount')))",
+            "type": "Expression"
+          },
+          "ifTrueActivities": [
+            {
+              "name": "Success_Path",
+              "type": "SetVariable",
+              "dependsOn": [],
+              "policy": {
+                "secureOutput": false,
+                "secureInput": false
+              },
+              "typeProperties": {
+                "variableName": "LoadCount",
+                "value": {
+                  "value": "SUCCESS: All @{variables('ExpectedCount')} loads are available",
+                  "type": "Expression"
+                }
+              }
+            }
+          ],
+          "ifFalseActivities": [
+            {
+              "name": "Force_Pipeline_Failure",
+              "type": "Fail",
+              "dependsOn": [],
+              "typeProperties": {
+                "message": "THROW 50000: TDR Load conditions not met - Pipeline terminated",
+                "errorCode": "50000"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "name": "Send_Failure_Notification",
+        "type": "ExecutePipeline",
+        "dependsOn": [
+          {
+            "activity": "Check_Load_Count",
+            "dependencyConditions": [
+              "Failed"
+            ]
+          }
+        ],
+        "policy": {
+          "secureInput": false
+        },
+        "userProperties": [],
+        "typeProperties": {
+          "pipeline": {
+            "referenceName": "Notification",
+            "type": "PipelineReference"
+          },
+          "waitOnCompletion": true,
+          "parameters": {
+            "subscription": {
+              "value": "@pipeline().globalParameters.SubscriptionID",
+              "type": "Expression"
+            },
+            "runId": {
+              "value": "@pipeline().RunId",
+              "type": "Expression"
+            },
+            "name": {
+              "value": "@pipeline().Pipeline",
+              "type": "Expression"
+            },
+            "triggerTime": {
+              "value": "@convertTimeZone(pipeline().TriggerTime,'UTC','Eastern Standard Time')",
+              "type": "Expression"
+            },
+            "status": {
+              "value": "Failed",
+              "type": "Expression"
+            },
+            "message": {
+              "value": "@if(contains(activity('Check_Load_Count').Error['message'],'THROW 50000'),concat('Load validation failed: Only ',variables('LoadCount'),' of ',variables('ExpectedCount'),' required loads are available'), concat('Pipeline execution failed: ',activity('Check_Load_Count').Error['message']))",
+              "type": "Expression"
+            },
+            "executionEndTime": {
+              "value": "@convertTimeZone(utcNow(),'UTC','Eastern Standard Time')",
+              "type": "Expression"
+            },
+            "runDuration": {
+              "value": "@activity('Check_Load_Count').Duration",
+              "type": "Expression"
+            },
+            "teamsWebhookUrl": {
+              "value": "@pipeline().globalParameters.notification_url",
+              "type": "Expression"
+            },
+            "resourceGroup": {
+              "value": "@pipeline().globalParameters.ccamsResourceGroup",
+              "type": "Expression"
+            }
+          }
+        }
+      }
+    ]
+  }
+}
