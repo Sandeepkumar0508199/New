@@ -42,56 +42,12 @@
           ],
           "ifFalseActivities": [
             {
-              "name": "Force_Pipeline_Failure_THROW",
-              "type": "Script",
+              "name": "Force_Pipeline_Failure_TEST",
+              "type": "Fail",
               "dependsOn": [],
-              "policy": {
-                "timeout": "0.12:00:00",
-                "retry": 0,
-                "retryIntervalInSeconds": 30,
-                "secureOutput": false,
-                "secureInput": false
-              },
-              "userProperties": [],
-              "linkedServiceName": {
-                "referenceName": "ls_tdr_db",
-                "type": "LinkedServiceReference",
-                "parameters": {
-                  "tdr_servername": {
-                    "value": "@pipeline().globalParameters.tdrServerName",
-                    "type": "Expression"
-                  },
-                  "tdr_databasename": {
-                    "value": "@pipeline().globalParameters.tdrDatabaseName",
-                    "type": "Expression"
-                  },
-                  "service_principal_Id": {
-                    "value": "@pipeline().globalParameters.ServicePrincipalID",
-                    "type": "Expression"
-                  },
-                  "secret": "secret",
-                  "subscription_id": {
-                    "value": "@pipeline().globalParameters.SubscriptionID",
-                    "type": "Expression"
-                  },
-                  "tenant_id": {
-                    "value": "@pipeline().globalParameters.TenantID",
-                    "type": "Expression"
-                  },
-                  "keyvault": {
-                    "value": "@pipeline().globalParameters.ccamsKeyVault",
-                    "type": "Expression"
-                  }
-                }
-              },
               "typeProperties": {
-                "scripts": [
-                  {
-                    "type": "Query",
-                    "text": "THROW 50000, 'TDR Load conditions not met - Pipeline terminated', 1;"
-                  }
-                ],
-                "scriptBlockExecutionTimeout": "02:00:00"
+                "message": "THROW 50000: TDR Load conditions not met - Pipeline terminated",
+                "errorCode": "50000"
               }
             }
           ]
