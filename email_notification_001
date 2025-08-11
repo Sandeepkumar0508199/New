@@ -1,0 +1,123 @@
+{
+  "name": "Test_THROW_Pipeline",
+  "properties": {
+    "description": "Test pipeline to demonstrate THROW statement failure mechanism with notification",
+    "variables": {
+      "LoadCount": {
+        "type": "String",
+        "defaultValue": "3"
+      },
+      "ExpectedCount": {
+        "type": "String",
+        "defaultValue": "4"
+      }
+    },
+    "activities": [
+      {
+        "name": "Check_Load_Count",
+        "type": "IfCondition",
+        "dependsOn": [],
+        "typeProperties": {
+          "expression": {
+            "value": "@greaterOrEquals(int(variables('LoadCount')), int(variables('ExpectedCount')))",
+            "type": "Expression"
+          },
+          "ifTrueActivities": [
+            {
+              "name": "Success_Path",
+              "type": "SetVariable",
+              "dependsOn": [],
+              "policy": {
+                "secureOutput": false,
+                "secureInput": false
+              },
+              "typeProperties": {
+                "variableName": "LoadCount",
+                "value": {
+                  "value": "SUCCESS: All @{variables('ExpectedCount')} loads are available",
+                  "type": "Expression"
+                }
+              }
+            }
+          ],
+          "ifFalseActivities": [
+            {
+              "name": "Force_Pipeline_Failure_TEST",
+              "type": "Fail",
+              "dependsOn": [],
+              "typeProperties": {
+                "message": "THROW 50000: TDR Load conditions not met - Pipeline terminated",
+                "errorCode": "50000"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "name": "Notification_Test_THROW",
+        "type": "ExecutePipeline",
+        "dependsOn": [
+          {
+            "activity": "Check_Load_Count",
+            "dependencyConditions": [
+              "Failed"
+            ]
+          }
+        ],
+        "policy": {
+          "secureInput": false
+        },
+        "userProperties": [],
+        "typeProperties": {
+          "pipeline": {
+            "referenceName": "Notification",
+            "type": "PipelineReference"
+          },
+          "waitOnCompletion": true,
+          "parameters": {
+            "subscription": {
+              "value": "@pipeline().globalParameters.SubscriptionID",
+              "type": "Expression"
+            },
+            "runId": {
+              "value": "@activity('Check_Load_Count').output['pipelineRunId']",
+              "type": "Expression"
+            },
+            "name": {
+              "value": "@pipeline().Pipeline",
+              "type": "Expression"
+            },
+            "triggerTime": {
+              "value": "@convertTimeZone(activity('Check_Load_Count').ExecutionStartTime,'UTC','Eastern Standard Time')",
+              "type": "Expression"
+            },
+            "status": {
+              "value": "@activity('Check_Load_Count').Status",
+              "type": "Expression"
+            },
+            "message": {
+              "value": "@if(contains(activity('Check_Load_Count').Error['message'],'THROW 50000'),concat('TDR Load conditions not met - Only ',variables('LoadCount'),' of ',variables('ExpectedCount'),' loads available'), concat('Test_THROW_Pipeline has failed. ',activity('Check_Load_Count').Error['message']))",
+              "type": "Expression"
+            },
+            "executionEndTime": {
+              "value": "@convertTimeZone(activity('Check_Load_Count').ExecutionEndTime,'UTC','Eastern Standard Time')",
+              "type": "Expression"
+            },
+            "runDuration": {
+              "value": "@activity('Check_Load_Count').Duration",
+              "type": "Expression"
+            },
+            "teamsWebhookUrl": {
+              "value": "@pipeline().globalParameters.notification_url",
+              "type": "Expression"
+            },
+            "resourceGroup": {
+              "value": "@pipeline().globalParameters.ccamsResourceGroup",
+              "type": "Expression"
+            }
+          }
+        }
+      }
+    ]
+  }
+}
