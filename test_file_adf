@@ -1,0 +1,102 @@
+{
+  "name": "Test_THROW_Pipeline",
+  "properties": {
+    "description": "Test pipeline to demonstrate THROW statement failure mechanism",
+    "variables": {
+      "LoadCount": {
+        "type": "String",
+        "defaultValue": "3"
+      },
+      "ExpectedCount": {
+        "type": "String",
+        "defaultValue": "4"
+      }
+    },
+    "activities": [
+      {
+        "name": "Check_Load_Count",
+        "type": "IfCondition",
+        "dependsOn": [],
+        "typeProperties": {
+          "expression": {
+            "value": "@greaterOrEquals(int(variables('LoadCount')), int(variables('ExpectedCount')))",
+            "type": "Expression"
+          },
+          "ifTrueActivities": [
+            {
+              "name": "Success_Path",
+              "type": "SetVariable",
+              "dependsOn": [],
+              "policy": {
+                "secureOutput": false,
+                "secureInput": false
+              },
+              "typeProperties": {
+                "variableName": "LoadCount",
+                "value": {
+                  "value": "SUCCESS: All @{variables('ExpectedCount')} loads are available",
+                  "type": "Expression"
+                }
+              }
+            }
+          ],
+          "ifFalseActivities": [
+            {
+              "name": "Force_Pipeline_Failure_THROW",
+              "type": "Script",
+              "dependsOn": [],
+              "policy": {
+                "timeout": "0.12:00:00",
+                "retry": 0,
+                "retryIntervalInSeconds": 30,
+                "secureOutput": false,
+                "secureInput": false
+              },
+              "userProperties": [],
+              "linkedServiceName": {
+                "referenceName": "ls_tdr_db",
+                "type": "LinkedServiceReference",
+                "parameters": {
+                  "tdr_servername": {
+                    "value": "@pipeline().globalParameters.tdrServerName",
+                    "type": "Expression"
+                  },
+                  "tdr_databasename": {
+                    "value": "@pipeline().globalParameters.tdrDatabaseName",
+                    "type": "Expression"
+                  },
+                  "service_principal_Id": {
+                    "value": "@pipeline().globalParameters.ServicePrincipalID",
+                    "type": "Expression"
+                  },
+                  "secret": "secret",
+                  "subscription_id": {
+                    "value": "@pipeline().globalParameters.SubscriptionID",
+                    "type": "Expression"
+                  },
+                  "tenant_id": {
+                    "value": "@pipeline().globalParameters.TenantID",
+                    "type": "Expression"
+                  },
+                  "keyvault": {
+                    "value": "@pipeline().globalParameters.ccamsKeyVault",
+                    "type": "Expression"
+                  }
+                }
+              },
+              "typeProperties": {
+                "scripts": [
+                  {
+                    "type": "Query",
+                    "text": "THROW 50000, 'TDR Load conditions not met - Pipeline terminated', 1;"
+                  }
+                ],
+                "scriptBlockExecutionTimeout": "02:00:00"
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}
