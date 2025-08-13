@@ -1,0 +1,11 @@
+SELECT 
+    'SurveillanceRun' as TableName,
+    COLUMN_NAME,
+    DATA_TYPE,
+    IS_NULLABLE,
+    COLUMN_DEFAULT,
+    COLUMNPROPERTY(OBJECT_ID('ccams.SurveillanceRun'), COLUMN_NAME, 'IsIdentity') as IsAutoIncrement
+FROM INFORMATION_SCHEMA.COLUMNS 
+WHERE TABLE_NAME = 'SurveillanceRun'
+  AND TABLE_SCHEMA = 'ccams'
+  AND COLUMN_NAME IN ('SurveillanceRunId', 'Id', 'SurveillanceId')
