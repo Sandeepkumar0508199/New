@@ -11,3 +11,18 @@ WHERE TABLE_NAME = 'SurveillanceRun'
   AND COLUMN_NAME IN ('SurveillanceRunId', 'Id', 'SurveillanceId')
 
 EXEC [dbo].[sp_CheckTDRLoadstatusview] @lv_batchid = '20250614'
+
+-- First get the process date (T-2)
+DECLARE @return_value varchar(100)
+DECLARE @RUNProcessDate varchar(100) 
+DECLARE @ProcessDate varchar(100)
+
+EXEC [dbo].[sp_BusinessDateT-2] 
+    @RUNProcessDate OUTPUT, 
+    @ProcessDate OUTPUT
+
+-- Now check TDR load status using the calculated date
+EXEC [dbo].[sp_CheckTDRLoadstatusview] @lv_batchid = @ProcessDate
+
+-- Show what date was used
+SELECT @ProcessDate as ProcessDateUsed
