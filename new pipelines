@@ -26,3 +26,12 @@ EXEC [dbo].[sp_CheckTDRLoadstatusview] @lv_batchid = @ProcessDate
 
 -- Show what date was used
 SELECT @ProcessDate as ProcessDateUsed
+
+SELECT 
+    COUNT(*) as RecordCount,
+    CASE 
+        WHEN COUNT(*) > 0 THEN 'TRUE' 
+        ELSE 'FALSE' 
+    END as Result
+FROM [dbo].[CONDUCT_DERIVATIVES_PRE_STG] 
+WHERE BatchId = '20250612'
