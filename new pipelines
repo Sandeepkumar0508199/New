@@ -9,3 +9,5 @@ FROM INFORMATION_SCHEMA.COLUMNS
 WHERE TABLE_NAME = 'SurveillanceRun'
   AND TABLE_SCHEMA = 'ccams'
   AND COLUMN_NAME IN ('SurveillanceRunId', 'Id', 'SurveillanceId')
+
+EXEC [dbo].[sp_CheckTDRLoadstatusview] @lv_batchid = '20250614'
