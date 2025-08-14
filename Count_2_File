@@ -1,0 +1,12 @@
+select @count2 = count(*) from (
+    select case when isnull(s.runid, '') = '' then 'failed' 
+           else case s.LoadStatus when 'skipped' then 'No File' 
+                else s.LoadStatus end end as LoadStatus
+    from (
+        select w.BatchId, v.RunId, LoadName, isnull(finalloadstatus, 'Failed') as LoadStatus
+        from [dbo].[vw_DataLoadRuns2] w
+        left outer join dbo.jobactivitytable j on w.runid = j.runid
+        and processname = 'Stage to Outbound'
+        where isactive = 'Y' and w.loadname in (select venue from LoadStatusCheckConfig where batchtype='I') and v.BatchID = @Minus1batchid
+    ) s 
+) cnt where cnt.loadstatus <> 'failed'
