@@ -34,3 +34,7 @@ equals(activity('2B Cross Product Manipulation Master PL').status,'Failed')
 +++++++++++++++++++++++++++++++++
 
 @string(or(or(equals(activity('EXACT_NAME_1').status,'Failed'),equals(activity('EXACT_NAME_2').status,'Failed')),equals(activity('EXACT_NAME_3').status,'Failed')))
+
+@string(or(or(equals(activity('Spoofing Nikko CrossProduct Master PL').status,'Failed'),equals(activity('Spoofing Nikko Cash Master PL').status,'Failed')),equals(activity('2B Cross Product Manipulation Master PL').status,'Failed')))
+
+
