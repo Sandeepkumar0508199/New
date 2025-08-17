@@ -1,31 +1,4 @@
-@string(
-@string(or(
-@string(or(or(or(
-equals(activity('Spoofing Nikko CrossProduct Master PL').status,'Failed'),
-equals(activity('Spoofing Nikko Cash Master PL').status,'Failed')
-),or(
-equals(activity('Spoofing Nikko Future Master PL').status,'Failed'),
-equals(activity('2B Spoofing NYB FX Master PL').status,'Failed')
-)),
-or(or(
-equals(activity('2B Momentum Ignition FI Nikko Master PL').status,'Failed'),
-equals(activity('2B Shadowing Nikko FI Master PL').status,'Failed')
-),or(
-equals(activity('2B Shadowing Nikko EO Master PL').status,'Failed'),
-equals(activity('2B Momentum Ignition NYB FX Master PL').status,'Failed')
-)),
-or(or(or(
-equals(activity('2B Momentum Ignition NYB FI Master PL').status,'Failed'),
-equals(activity('2B Momentum Ignition CM FX Master PL').status,'Failed')
-),or(
-equals(activity('2B Momentum Ignition CM FI Master PL').status,'Failed'),
-equals(activity('2B Customer Cross NYB Master PL').status,'Failed')
-)),or(
-equals(activity('2B Customer Cross CM Master PL').status,'Failed'),
-equals(activity('2B Cross Product Manipulation Master PL').status,'Failed')
-))
-))
-
+@string(or(or(or(or(equals(activity('Spoofing Nikko CrossProduct Master PL').status,'Failed'),equals(activity('Spoofing Nikko Cash Master PL').status,'Failed')),or(equals(activity('Spoofing Nikko Future Master PL').status,'Failed'),equals(activity('2B Spoofing NYB FX Master PL').status,'Failed'))),or(or(equals(activity('2B Momentum Ignition FI Nikko Master PL').status,'Failed'),equals(activity('2B Shadowing Nikko FI Master PL').status,'Failed')),or(equals(activity('2B Shadowing Nikko EO Master PL').status,'Failed'),equals(activity('2B Momentum Ignition NYB FX Master PL').status,'Failed')))),or(or(or(equals(activity('2B Momentum Ignition NYB FI Master PL').status,'Failed'),equals(activity('2B Momentum Ignition CM FX Master PL').status,'Failed')),or(equals(activity('2B Momentum Ignition CM FI Master PL').status,'Failed'),equals(activity('2B Customer Cross NYB Master PL').status,'Failed'))),or(equals(activity('2B Customer Cross CM Master PL').status,'Failed'),equals(activity('2B Cross Product Manipulation Master PL').status,'Failed')))))
 +++++++++++++++++++++++++++++++++++++++
 
 @string(or(or(or(or(equals(activity('Spoofing Nikko CrossProduct Master PL').status,'Failed'),equals(activity('Spoofing Nikko Cash Master PL').status,'Failed')),or(equals(activity('Spoofing Nikko Future Master PL').status,'Failed'),equals(activity('2B Spoofing NYB FX Master PL').status,'Failed'))),or(or(equals(activity('2B Momentum Ignition FI Nikko Master PL').status,'Failed'),equals(activity('2B Shadowing Nikko FI Master PL').status,'Failed')),or(equals(activity('2B Shadowing Nikko EO Master PL').status,'Failed'),equals(activity('2B Momentum Ignition NYB FX Master PL').status,'Failed')))),or(or(or(equals(activity('2B Momentum Ignition NYB FI Master PL').status,'Failed'),equals(activity('2B Momentum Ignition CM FX Master PL').status,'Failed')),or(equals(activity('2B Momentum Ignition CM FI Master PL').status,'Failed'),equals(activity('2B Customer Cross NYB Master PL').status,'Failed'))),or(equals(activity('2B Customer Cross CM Master PL').status,'Failed'),equals(activity('2B Cross Product Manipulation Master PL').status,'Failed')))))
