@@ -1,0 +1,24 @@
+-- Complete diagnosis for Aug 14th batch failure
+DECLARE @lv_batchid INT = 20250814;
+DECLARE @TMinus2batchid INT = @lv_batchid;
+DECLARE @TMinus1batchid INT = dbo.udf_businessdate();
+DECLARE @Today DATE = '2025-08-14';
+DECLARE @Count1 INT, @Count2 INT, @Count3 INT;
+
+SELECT @Count1 = count(*) FROM tdrloadstatusview 
+WHERE batchid = @TMinus2batchid AND loadstatus <> 'Failed' 
+AND LoadName IN (SELECT venue FROM LoadStatusCheckConfig WHERE batchtype='T2');
+
+SELECT @Count2 = count(*) FROM tdrloadstatusviewt1 
+WHERE batchid = @TMinus1batchid AND loadstatus <> 'Failed' 
+AND LoadName IN (SELECT venue FROM LoadStatusCheckConfig WHERE batchtype='T1');
+
+SELECT @Count3 = count(*) FROM CCAMSAutoTriggerLog WHERE createdon = @Today;
+
+SELECT 
+    CASE 
+        WHEN @Count1 <> 13 THEN 'FAILED: T-2 loads incomplete (' + CAST(@Count1 AS VARCHAR) + '/13)'
+        WHEN @Count2 <= (SELECT count(*) - 1 FROM LoadStatusCheckConfig WHERE batchtype='T1') THEN 'FAILED: T-1 loads incomplete (' + CAST(@Count2 AS VARCHAR) + ' loads)'
+        WHEN @Count3 > 0 THEN 'FAILED: Batch already ran today (' + CAST(@Count3 AS VARCHAR) + ' times)'
+        ELSE 'Should have passed - check other issues'
+    END AS Failure_Reason;
