@@ -1,1 +1,1 @@
-@or(or(equals(variables('HasFailures1'), 'True'),equals(variables('HasFailures2'), 'True')),or(equals(variables('HasFailures3'), 'True'),equals(variables('HasFailures4'), 'True')))
+@or(or(or(equals(variables('HasFailures1'), 'True'), equals(variables('HasFailures2'), 'True')), or(equals(variables('HasFailures3'), 'True'), equals(variables('HasFailures4'), 'True'))), equals(variables('HasFailures5'), 'True'))
