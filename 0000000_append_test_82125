@@ -1,0 +1,1 @@
+@if(equals(activity('Spoofing Nikko CrossProduct Master PL').status,'Failed'), 'Spoofing Nikko CrossProduct Master PL Failed', json('null'))
