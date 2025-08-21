@@ -1,0 +1,13 @@
+@if(equals(activity('Spoofing Nikko CrossProduct Master PL').status,'Failed'), 'Spoofing Nikko CrossProduct Master PL', 
+if(equals(activity('Spoofing Nikko Cash Master PL').status,'Failed'), 'Spoofing Nikko Cash Master PL',
+if(equals(activity('Spoofing Nikko Future Master PL').status,'Failed'), 'Spoofing Nikko Future Master PL',
+if(equals(activity('2B Spoofing NYB FX Master PL').status,'Failed'), '2B Spoofing NYB FX Master PL',
+if(equals(activity('2B Momentum Ignition FI Nikko Master PL').status,'Failed'), '2B Momentum Ignition FI Nikko Master PL',
+if(equals(activity('2B Shadowing Nikko FI Master PL').status,'Failed'), '2B Shadowing Nikko FI Master PL',
+if(equals(activity('2B Momentum Ignition NYB FX Master PL').status,'Failed'), '2B Momentum Ignition NYB FX Master PL',
+if(equals(activity('2B Momentum Ignition NYB FI Master PL').status,'Failed'), '2B Momentum Ignition NYB FI Master PL',
+if(equals(activity('2B Momentum Ignition CM FX Master PL').status,'Failed'), '2B Momentum Ignition CM FX Master PL',
+if(equals(activity('2B Momentum Ignition CM FI Master PL').status,'Failed'), '2B Momentum Ignition CM FI Master PL',
+if(equals(activity('2B Customer Cross NYB Master PL').status,'Failed'), '2B Customer Cross NYB Master PL',
+if(equals(activity('2B Customer Cross CM Master PL').status,'Failed'), '2B Customer Cross CM Master PL',
+if(equals(activity('2B Cross Product Manipulation Master PL').status,'Failed'), '2B Cross Product Manipulation Master PL', json('null'))))))))))))))
