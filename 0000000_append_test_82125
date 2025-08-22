@@ -1,2 +1,3 @@
+@if(equals(activity('MasterPL').status, 'Failed'), createArray('MasterPL Failed'), createArray())
 @string(contains(string(variables('FailedPipelines')), 'Failed'))
 @if(equals(activity('Spoofing Nikko CrossProduct Master PL').status,'Failed'), 'Pipeline1 Failed', 'Pipeline1 Succeeded')
