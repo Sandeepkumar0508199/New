@@ -85,3 +85,5 @@ CM Pipelines:*
 22.⁠ ⁠Spoofing Nikko FUT PL
 23.⁠ ⁠Suspicious Volume Nikko FUT PL
 24.⁠ ⁠Wash Nikko FUT PL
+
+The MasterPL for 2A/2B Patterns will fail if any of the 14 pipelines fails, and the failed pipeline’s name will be logged in FinalMasterPLFail.
