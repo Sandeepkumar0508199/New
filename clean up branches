@@ -11,3 +11,44 @@ CAMM_163_append_14_PL_082125 branch Tested for two pipelines for two append vari
 CAMM_163_feature branch/ Append variable(last)/set variable at the last and if condition
 CAMM_163_feature08202025 branch 5 Set variable/if condition
 test branch
+
+---------------------------------
+Branches under “nothing in the branch:”
+
+08192025_fail_master_pl branch
+
+08192025_feature branch
+
+sandeep_dev_branch branch
+
+tws-int-tdr-failure-feature-test branch
+
+temp_001_test_fail_tws_feature
+
+sandeep_test branch
+
+TWS_test_all_pipelines branch
+
+main_backup-08092025 branch
+
+prod_deploy_backup branch
+
+QA_Shadowing branch
+
+main_jun_05_25 branch
+
+dev branch
+
+R_Testing branch
+
+Branches under “Working branch:”
+
+CAMM_163_append_14_PL_082125 branch
+
+082225CAMM_163_append_14_PL_ branch
+
+CAMM_163_feature branch
+
+CAMM_163_feature08202025 branch
+
+test branch
