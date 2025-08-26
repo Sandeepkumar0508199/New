@@ -52,3 +52,36 @@ CAMM_163_feature branch
 CAMM_163_feature08202025 branch
 
 test branch
+
+-----------------------------------------------
+
+CM Pipelines:*
+
+ 1.⁠ ⁠Cross Product Manipulation CM FUT PL
+ 1.⁠ ⁠Customer Cross CM FUT PL
+ 1.⁠ ⁠Front Running CM FUT PL
+ 1.⁠ ⁠Momentum Ignition CM FUT PL
+ 1.⁠ ⁠Quote Stuffing CM FUT PL
+ 1.⁠ ⁠Spoofing CM FUT PL
+ 1.⁠ ⁠Suspicious Volume CM FUT PL
+ 1.⁠ ⁠Wash CM FUT PL
+
+*NYB Pipelines:*
+ 9.⁠ ⁠Cross Product Manipulation NYB FUT PL
+10.⁠ ⁠Customer Cross NYB FUT PL
+11.⁠ ⁠Front Running NYB FUT PL
+12.⁠ ⁠Momentum Ignition NYB FUT PL
+13.⁠ ⁠Quote Stuffing NYB FUT PL
+14.⁠ ⁠Spoofing NYB FUT PL
+15.⁠ ⁠Suspicious Volume NYB FUT PL
+16.⁠ ⁠Wash NYB FUT PL
+
+*Nikko Pipelines:*
+17.⁠ ⁠Cross Product Manipulation Nikko FUT PL
+18.⁠ ⁠Customer Cross Nikko FUT PL
+19.⁠ ⁠Front Running Nikko FUT PL
+20.⁠ ⁠Momentum Ignition Nikko FUT PL
+21.⁠ ⁠Quote Stuffing Nikko FUT PL
+22.⁠ ⁠Spoofing Nikko FUT PL
+23.⁠ ⁠Suspicious Volume Nikko FUT PL
+24.⁠ ⁠Wash Nikko FUT PL
