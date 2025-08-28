@@ -80,3 +80,7 @@ Purpose: Sends a request downstream or completes the analytics cycle with result
 ----------------------------------------------------------------------
 
 When the EBS job failed due to an unsatisfied dependency, the CCAMS job remained in a Waiting state and did not trigger. Once the EBS job was either rerun or manually marked as Successful, CCAMS was immediately triggered and moved into Execution. In the case where EBS was Canceled, CCAMS continued to stay in Waiting and did not run. This confirms that CCAMS only triggers when EBS completes successfully.
+
+During testing, we first triggered PL_NOTIFY_CCAMS. Since the batch run for that day was already completed, the expectation was that this job would not run successfully. As expected, the job failed and the status was recorded as Error, confirming the correct handling of duplicate runs.
+
+In the next scenario, we triggered the Master PL for the 2A/2B patterns to validate the failure-handling changes. The job triggered successfully and entered execution with a status of Running/Success in TWS. In cases where any of the pipelines under this Master PL fail, the failure is captured and logged into a dedicated logging activity called FinalMasterPLFail, ensuring full visibility of failed pipelines.
