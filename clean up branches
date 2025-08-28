@@ -87,3 +87,29 @@ CM Pipelines:*
 24.⁠ ⁠Wash Nikko FUT PL
 
 The MasterPL for 2A/2B Patterns will fail if any of the 14 pipelines fails, and the failed pipeline’s name will be logged in FinalMasterPLFail.
+
+-------------------------------------------------------------------------------------------
+
+TDR → TWS Integration – Test Evidence (08/27/2025)
+
+Environment: REL
+Scope: Validation of TDR → TWS orchestration for failure/success scenarios.
+Testers: Nutan Gawade, Venkat Addagalla, Sandeep
+
+🔹 Test Scenarios Executed
+
+Trigger PL_NOTIFY_CCAMS
+
+Expectation: Should fail since batch run was already completed for the day.
+
+Actual: Failed as expected → Status: Error (ABEND) at 3:23 PM EDT.
+
+✅ Evidence attached (TWS screenshot).
+
+Trigger MasterPL for 2A/2B Patterns
+
+Expectation: Run and validate failure-handling changes.
+
+Actual: Job triggered → Status: Running/Success in TWS at 3:25 PM EDT.
+
+✅ Evidence attached (TWS screenshot).
