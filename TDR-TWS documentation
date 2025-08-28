@@ -97,3 +97,15 @@ Observation: All 14 jobs under TDRLoadStatus for T-1 NY-TDR-LOAD-EBS and T-2 PL_
 Result: The downstream pipelines, including the Master PL for 2A/2B patterns, executed as expected. Any failures within the Master PL are captured and logged into the FinalMasterPLFail activity. Importantly, once the Master PL for 2A/2B patterns completes, irrespective of Success or Failure, the flow continues and PL_CCAMSRequest is triggered.
 --------------------------------------------------------------------
 This confirms that once the EBS load completes successfully, the orchestration works as designed — all pipelines execute end-to-end and the CCAMS request is always triggered after Master PL completion.
+----------------------------------------------------------------
+Scenario: EBS Data Load Completes Successfully
+
+When the EBS job (NY-TDR-LOAD-EBS) completes successfully, all the dependent pipelines are triggered in sequence. The flow proceeds as:
+
+EBS → PL_NOTIFY_CCAMS → Master PL for 2A/2B patterns → PL_CCAMSRequest
+
+Observation: All 14 jobs under TDRLoadStatus for T-1 NY-TDR-LOAD-EBS and T-2 PL_NOTIFY_CCAMS were triggered successfully.
+
+Result: The downstream pipelines, including the Master PL for 2A/2B patterns, executed as expected. Any failures within the Master PL are captured and logged into the FinalMasterPLFail activity. Importantly, once the Master PL for 2A/2B patterns completes, irrespective of Success or Failure, the flow continues and PL_CCAMSRequest is triggered.
+
+This confirms that once the EBS load completes successfully, the orchestration works as designed — all pipelines execute end-to-end and the CCAMS request is always triggered after Master PL completion.
