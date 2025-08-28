@@ -76,3 +76,7 @@ Pipeline Name: PL_CCAMSRequest
 Dependency: This pipeline is triggered irrespective of whether Master 2A 2B Patterns succeeded or failed.
 
 Purpose: Sends a request downstream or completes the analytics cycle with results/logs
+
+----------------------------------------------------------------------
+
+When the EBS job failed due to an unsatisfied dependency, the CCAMS job remained in a Waiting state and did not trigger. Once the EBS job was either rerun or manually marked as Successful, CCAMS was immediately triggered and moved into Execution. In the case where EBS was Canceled, CCAMS continued to stay in Waiting and did not run. This confirms that CCAMS only triggers when EBS completes successfully.
