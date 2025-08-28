@@ -47,3 +47,32 @@ Step	Pipeline	ADF Name	Dependency
 2	PL_Notify_CCAMS	adf-tdr-rel-use2	After NY-TDR-LOAD-EBS
 3	Master 2A 2B Patterns	adf-ccams-rel-use2-01	After PL_Notify_CCAMS
 4	PL_CCAMSRequest	adf-tdr-rel-use2	After Master 2A 2B
+
+
+Step 3: Master 2A 2B Patterns
+
+ADF Name: adf-ccams-rel-use2-01
+
+Pipeline Name: Master 2A 2B Patterns
+
+Dependency: Triggered upon successful completion of PL_Notify_CCAMS
+
+Purpose: Orchestrates multiple downstream analytics pipelines for 2A/2B surveillance pattern processing
+------------------------------------------------------------
+✅ Important Behavior:
+
+If any one of the sub-pipelines inside Master 2A 2B Patterns fails:
+
+The failure is logged into a dedicated logging pipeline called FinalMasterPLFail.
+
+This log acts as a checkpoint or audit for analytics operations and support teams.
+
+Step 4: PL_CCAMSRequest
+
+ADF Name: adf-tdr-rel-use2
+
+Pipeline Name: PL_CCAMSRequest
+
+Dependency: This pipeline is triggered irrespective of whether Master 2A 2B Patterns succeeded or failed.
+
+Purpose: Sends a request downstream or completes the analytics cycle with results/logs
