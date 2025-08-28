@@ -1,0 +1,49 @@
+1. Introduction
+This document provides a step-by-step record of the integration between Trade Data Repository (TDR) and Tivoli Workload Scheduler (TWS) for orchestrating analytics pipelines via Azure Data Factory (ADF).
+The objective of this integration is to ensure that downstream analytics pipelines are only triggered after confirming the successful completion of upstream dependencies — specifically:
+•	EBS loads (T-1)
+•	PL_Notify_CCAMS process (T-2)
+
+
+
+2. SPN Authentication and Azure Integration
+To establish secure communication between TWS, TDR, and Azure Data Factory, we leveraged an existing Service Principal Name (SPN) already configured with contributor access to the relevant Azure resources.
+SPN Authentication Setup
+•	The existing centralized SPN is used to authenticate TWS and ADF activities securely.
+•	This SPN is managed under Azure Active Directory (AAD) and has:
+o	Contributor rights to the required resource groups (TDR and CCAMS).
+o	Permissions to trigger ADF pipelines.
+o	Access scope limited to QA, REL, and PROD environments for security compliance.
+Integration Touchpoints
+•	TWS authenticates with Azure using the SPN and triggers ADF pipelines securely.
+•	The SPN's credentials are stored securely in TWS as part of the job stream configuration and are rotated per organizational policy.
+
+2. Triggering Logic After Integration (REL Environment)
+The following section outlines the exact sequence of pipeline executions within the REL environment:
+Step 1: NY-TDR-LOAD-EBS (T 1 Load)
+•	ADF Name: adf-tdr-rel-use2
+•	Pipeline Name: NY-TDR-LOAD-EBS
+•	Trigger Source: TWS
+•	Purpose: Loads trade data files into TDR
+•	Schedule: Daily
+Step 2: PL_Notify_CCAMS (T 2 Readiness Check)
+•	ADF Name: adf-tdr-rel-use2
+•	Pipeline Name: PL_Notify_CCAMS
+•	Dependency: Waits for NY-TDR-LOAD-EBS to succeed
+•	Purpose: Validates T 1 data and signals readiness for analytics
+Step 3: Master 2A 2B Patterns
+•	ADF Name: adf-ccams-rel-use2-01
+•	Pipeline Name: Master 2A 2B Patterns
+•	Dependency: Triggered by PL_Notify_CCAMS completion
+•	Purpose: Kicks off various 2A/2B surveillance pattern jobs
+Step 4: PL_CCAMSRequest
+•	ADF Name: adf-tdr-rel-use2
+•	Pipeline Name: PL_CCAMSRequest
+•	Dependency: Executes after Master 2A 2B Patterns pipeline completes
+•	Purpose: Submits analytics outputs or initiates final downstream processing
+Summary Table:
+Step	Pipeline	ADF Name	Dependency
+1	NY-TDR-LOAD-EBS	adf-tdr-rel-use2	Triggered by TWS
+2	PL_Notify_CCAMS	adf-tdr-rel-use2	After NY-TDR-LOAD-EBS
+3	Master 2A 2B Patterns	adf-ccams-rel-use2-01	After PL_Notify_CCAMS
+4	PL_CCAMSRequest	adf-tdr-rel-use2	After Master 2A 2B
